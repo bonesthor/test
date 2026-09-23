@@ -350,3 +350,58 @@ export function drawBrain(canvas, creature) {
     ctx.fillText(output[o].toFixed(2), xOut + 12, yOut(o) + 7);
   }
 }
+
+// ---------------------------------------------------------------- trends
+
+export const TRENDS = [
+  { key: 'size', label: 'Body size', fmt: (v) => `${(v * 10).toFixed(1)} µm` },
+  { key: 'diet', label: 'Carnivory', fmt: (v) => `${Math.round(v * 100)}%` },
+  { key: 'speed', label: 'Muscle', fmt: (v) => v.toFixed(2) },
+  { key: 'sense', label: 'Sight range', fmt: (v) => `${Math.round(v)} µm` },
+];
+
+// One small area chart per trait: the population mean over time, with its
+// own min–max scale so drift is visible even when it is slight.
+export function drawTrend(canvas, samples, key, color) {
+  const { ctx, w, h } = sizeCanvas(canvas, 46);
+  ctx.clearRect(0, 0, w, h);
+  const pts = [];
+  for (let i = 0; i < samples.length; i++) {
+    const v = samples[i][key];
+    if (v !== undefined && samples[i].population > 0) pts.push([i, v]);
+  }
+  if (pts.length < 2) return null;
+  let lo = Infinity;
+  let hi = -Infinity;
+  for (const [, v] of pts) {
+    lo = Math.min(lo, v);
+    hi = Math.max(hi, v);
+  }
+  const pad = (hi - lo) * 0.15 || Math.abs(hi) * 0.05 || 0.01;
+  lo -= pad;
+  hi += pad;
+  const n = samples.length - 1 || 1;
+  const x = (i) => 2 + (i / n) * (w - 8);
+  const y = (v) => 3 + (1 - (v - lo) / (hi - lo)) * (h - 6);
+
+  ctx.beginPath();
+  ctx.moveTo(x(pts[0][0]), h);
+  for (const [i, v] of pts) ctx.lineTo(x(i), y(v));
+  ctx.lineTo(x(pts.at(-1)[0]), h);
+  ctx.closePath();
+  ctx.globalAlpha = 0.14;
+  ctx.fillStyle = color;
+  ctx.fill();
+  ctx.globalAlpha = 1;
+  ctx.beginPath();
+  for (const [i, v] of pts) ctx.lineTo(x(i), y(v));
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  const [li, lv] = pts.at(-1);
+  ctx.beginPath();
+  ctx.arc(x(li), y(lv), 2.5, 0, Math.PI * 2);
+  ctx.fillStyle = color;
+  ctx.fill();
+  return { first: pts[0][1], last: lv };
+}

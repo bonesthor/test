@@ -171,3 +171,25 @@ test('the pool reseeds itself when life nearly dies out', () => {
   assert.ok(world.creatures.length >= world.opts.minPopulation);
   assert.ok(world.events.some((e) => e.kind === 'seed' && /drifts in/.test(e.text)));
 });
+
+test('a saved world resumes exactly where it left off', () => {
+  const original = new World({ seed: 'amber', width: 1400, height: 1100 });
+  for (let i = 0; i < 2500; i++) original.step();
+  const json = JSON.stringify(original.toJSON());
+  const restored = World.fromJSON(JSON.parse(json));
+  assert.equal(restored.width, 1400);
+  assert.equal(restored.height, 1100);
+  assert.equal(fingerprint(restored), fingerprint(original));
+  for (let i = 0; i < 2000; i++) {
+    original.step();
+    restored.step();
+  }
+  assert.equal(fingerprint(restored), fingerprint(original));
+  assert.equal(restored.speciesOrder.length, original.speciesOrder.length);
+  assert.equal(restored.events.length, original.events.length);
+  assert.deepEqual(restored.samples.at(-1), original.samples.at(-1));
+});
+
+test('save files reject unknown formats', () => {
+  assert.throws(() => World.fromJSON({ version: 99 }), /save format/);
+});

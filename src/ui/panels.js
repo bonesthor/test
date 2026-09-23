@@ -15,7 +15,8 @@ export function renderSpeciesList(listEl, world, focusId, onFocus) {
   const max = living[0]?.population || 1;
   const existing = new Map([...listEl.children].map((li) => [Number(li.dataset.id), li]));
   const keep = new Set();
-  for (const sp of living) {
+  for (let i = 0; i < living.length; i++) {
+    const sp = living[i];
     keep.add(sp.id);
     let li = existing.get(sp.id);
     if (!li) {
@@ -41,7 +42,8 @@ export function renderSpeciesList(listEl, world, focusId, onFocus) {
     tag.textContent = DIET_LABEL[diet];
     li.querySelector('.sp-count').textContent = sp.population;
     btn.title = `${sp.population} alive · ${Math.round((sp.population / max) * 100)}% of the largest species`;
-    listEl.appendChild(li);
+    // Only move rows whose position changed, so a click in progress isn't lost.
+    if (listEl.children[i] !== li) listEl.insertBefore(li, listEl.children[i] ?? null);
   }
   for (const [id, li] of existing) if (!keep.has(id)) li.remove();
 }
@@ -168,4 +170,93 @@ export function renderLogEntry(world, ev, onSpecies) {
   li.innerHTML = `<time>d ${days(ev.tick)}</time><span><span class="kind ${ev.kind}">${ev.kind}</span>${html}</span>`;
   for (const em of li.querySelectorAll('em[data-sp]')) em.addEventListener('click', () => onSpecies(Number(em.dataset.sp)));
   return li;
+}
+
+// ---------------------------------------------------------------- trends
+
+export function renderTrends(el, world, trends, draw, color) {
+  if (!el.children.length) {
+    el.innerHTML = trends
+      .map((t) => `<div class="trend" data-key="${t.key}">
+          <header><span>${t.label}</span><span><b></b> <small></small></span></header>
+          <canvas class="chart"></canvas>
+        </div>`)
+      .join('');
+  }
+  for (const t of trends) {
+    const box = el.querySelector(`[data-key="${t.key}"]`);
+    const r = draw(box.querySelector('canvas'), world.samples, t.key, color);
+    box.querySelector('b').textContent = r ? t.fmt(r.last) : '–';
+    let delta = '';
+    if (r && Math.abs(r.first) > 1e-6) {
+      const pct = Math.round(((r.last - r.first) / Math.abs(r.first)) * 100);
+      delta = pct === 0 ? '±0%' : `${pct > 0 ? '+' : '−'}${Math.abs(pct)}%`;
+    } else if (r) delta = `${r.last >= r.first ? '+' : '−'}${t.fmt(Math.abs(r.last - r.first))}`;
+    box.querySelector('small').textContent = delta;
+    box.title = r ? `${t.label}: ${t.fmt(r.first)} at the start of the record, ${t.fmt(r.last)} now` : '';
+  }
+}
+
+// ---------------------------------------------------------------- species card
+
+const COMPARE = [
+  ['size', 'Body size', (v) => `${(v * 10).toFixed(1)} µm`],
+  ['diet', 'Carnivory', (v) => `${Math.round(v * 100)}%`],
+  ['speed', 'Muscle', (v) => v.toFixed(2)],
+  ['sense', 'Sight range', (v) => `${Math.round(v)} µm`],
+  ['fov', 'Field of view', (v) => `${Math.round((v * 180) / Math.PI)}°`],
+];
+
+export function renderSpeciesCard(el, world, id, handlers) {
+  const sp = id ? world.species.get(id) : null;
+  el.hidden = !sp;
+  if (!sp) {
+    el.dataset.id = '';
+    return;
+  }
+  if (el.dataset.id !== String(id)) {
+    el.dataset.id = String(id);
+    const parent = sp.parentId ? world.species.get(sp.parentId) : null;
+    el.innerHTML = `
+      <div>
+        <div class="eyebrow" data-f="state"></div>
+        <h2 style="color:${speciesColor(sp.hue)}">${esc(sp.name)}</h2>
+        <p>${parent ? `Branched from <i>${esc(parent.name)}</i> on day ${days(sp.bornTick)}` : `A founding lineage, arrived day ${days(sp.bornTick)}`}</p>
+      </div>
+      <div class="tally">
+        <div><b data-f="alive"></b><span>alive</span></div>
+        <div><b data-f="peak"></b><span>peak</span></div>
+        <div><b data-f="kills"></b><span>kills</span></div>
+        <div><b data-f="daughters"></b><span>offshoots</span></div>
+      </div>
+      <table class="compare">
+        <thead><tr><th>Trait</th><th>Founder</th><th>Today</th></tr></thead>
+        <tbody>${COMPARE.map(([k, label]) => `<tr><td>${label}</td><td data-f="f-${k}"></td><td data-f="n-${k}"></td></tr>`).join('')}</tbody>
+      </table>
+      <div class="row-actions">
+        <button class="btn" type="button" data-act="member">Examine a member</button>
+        <button class="btn" type="button" data-act="close">Stop highlighting</button>
+      </div>`;
+    el.querySelector('[data-act=member]').addEventListener('click', () => handlers.member(id));
+    el.querySelector('[data-act=close]').addEventListener('click', handlers.close);
+  }
+  const f = (k) => el.querySelector(`[data-f="${k}"]`);
+  const members = world.creatures.filter((c) => c.speciesId === id);
+  f('state').textContent = sp.population > 0
+    ? `Living · ${days(world.tick - sp.bornTick)} days old`
+    : `Extinct on day ${days(sp.extinctTick)} after ${days(sp.extinctTick - sp.bornTick)} days`;
+  f('alive').textContent = sp.population;
+  f('peak').textContent = sp.peak;
+  f('kills').textContent = sp.kills;
+  f('daughters').textContent = world.speciesOrder.filter((s) => s.parentId === id).length;
+  for (const [k, , fmt] of COMPARE) {
+    const founder = sp.founder.traits[k];
+    f(`f-${k}`).textContent = fmt(founder);
+    const cell = f(`n-${k}`);
+    if (members.length) {
+      const mean = members.reduce((a, c) => a + c.genome.traits[k], 0) / members.length;
+      cell.textContent = fmt(mean);
+    } else cell.textContent = '–';
+  }
+  el.querySelector('[data-act=member]').hidden = !members.length;
 }

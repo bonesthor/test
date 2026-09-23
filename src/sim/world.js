@@ -1,7 +1,7 @@
 import { Rng } from './rng.js';
 import { SpatialGrid } from './grid.js';
 import { SECTORS, IN, OUT, createBrainState, think } from './brain.js';
-import { primordialGenome, mutate, geneticDistance, cloneGenome } from './genome.js';
+import { primordialGenome, mutate, geneticDistance, cloneGenome, packGenome, unpackGenome, packFloats, unpackFloats } from './genome.js';
 import { makeGenus, makeEpithet } from './names.js';
 
 export const TICKS_PER_DAY = 600;
@@ -63,6 +63,7 @@ export class World {
     this.totalBorn = 0;
     this.totalKills = 0;
     this.firstKill = false;
+    this.firstCarnivore = false;
     this.foodDebt = 0;
     this.sampleEvery = 60;
     this.samples = [];
@@ -71,6 +72,7 @@ export class World {
 
     this.creatureGrid = new SpatialGrid(this.width, this.height, 80);
     this.foodGrid = new SpatialGrid(this.width, this.height, 50);
+    if (options.empty) return; // World.fromJSON fills in the rest.
 
     this.upwellings = [];
     for (let i = 0; i < this.opts.upwellings; i++) {
@@ -680,9 +682,14 @@ export class World {
   record() {
     let diet = 0;
     let size = 0;
+    let speed = 0;
+    let sense = 0;
     for (const c of this.creatures) {
-      diet += c.genome.traits.diet;
-      size += c.genome.traits.size;
+      const t = c.genome.traits;
+      diet += t.diet;
+      size += t.size;
+      speed += t.speed;
+      sense += t.sense;
     }
     const n = this.creatures.length || 1;
     let carrion = 0;
@@ -694,6 +701,8 @@ export class World {
       carrion,
       diet: diet / n,
       size: size / n,
+      speed: speed / n,
+      sense: sense / n,
       species: this.livingSpecies().length,
       season: this.season,
     });
@@ -728,6 +737,68 @@ export class World {
     this.onEvent?.(this.events[this.events.length - 1]);
   }
 }
+
+// ---------------------------------------------------------------- saving
+//
+// A snapshot captures everything the simulation needs, including the RNG
+// state, so a restored world carries on exactly as the original would have.
+
+const SCALARS = [
+  'seed', 'width', 'height', 'tick', 'nextId', 'nextSpeciesId', 'maxGeneration', 'totalBorn', 'totalKills',
+  'firstKill', 'firstCarnivore', 'foodDebt', 'sampleEvery', 'lastSeasonPhase', 'lastHunterTick', 'plankton',
+];
+const CREATURE_SKIP = new Set(['genome', 'brain', 'prey']);
+const SPECIES_SKIP = new Set(['founder']);
+
+World.prototype.toJSON = function toJSON() {
+  const out = { version: 1, opts: { ...this.opts }, rng: this.rng.getState() };
+  for (const k of SCALARS) out[k] = this[k];
+  out.upwellings = this.upwellings.map((u) => ({ ...u }));
+  out.food = [];
+  for (const f of this.food) out.food.push(f.x, f.y, f.energy, f.kind, f.age);
+  out.samples = this.samples;
+  out.events = this.events;
+  out.species = this.speciesOrder.map((sp) => {
+    // Extinct species keep only their founder's traits; their wiring is
+    // never consulted again, and it dominates the size of long-running saves.
+    const founder = sp.population > 0 ? packGenome(sp.founder) : { traits: { ...sp.founder.traits }, weights: null };
+    const o = { founder };
+    for (const k in sp) if (!SPECIES_SKIP.has(k)) o[k] = sp[k];
+    return o;
+  });
+  out.creatures = this.creatures.map((c) => {
+    const o = { genome: packGenome(c.genome), memory: packFloats(c.brain.output) };
+    for (const k in c) if (!CREATURE_SKIP.has(k)) o[k] = c[k];
+    return o;
+  });
+  return out;
+};
+
+World.fromJSON = function fromJSON(data) {
+  if (data?.version !== 1) throw new Error('Unrecognised save format');
+  const w = new World({ ...data.opts, seed: data.seed, empty: true });
+  w.opts = { ...data.opts };
+  for (const k of SCALARS) w[k] = data[k];
+  w.rng.setState(data.rng);
+  w.upwellings = data.upwellings.map((u) => ({ ...u }));
+  w.food = [];
+  for (let i = 0; i < data.food.length; i += 5) {
+    const [x, y, energy, kind, age] = data.food.slice(i, i + 5);
+    w.food.push({ x, y, energy, kind, age, alive: true });
+  }
+  w.samples = data.samples;
+  w.events = data.events;
+  w.speciesOrder = data.species.map((o) => ({ ...o, founder: unpackGenome(o.founder) }));
+  w.species = new Map(w.speciesOrder.map((sp) => [sp.id, sp]));
+  w.creatures = data.creatures.map((o) => {
+    const c = { ...o, genome: unpackGenome(o.genome), brain: createBrainState(), prey: null };
+    delete c.memory;
+    c.brain.output.set(unpackFloats(o.memory));
+    return c;
+  });
+  w.byId = new Map(w.creatures.map((c) => [c.id, c]));
+  return w;
+};
 
 // A short parenthetical noting the biggest change in body plan.
 function describeShift(from, to) {

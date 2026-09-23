@@ -66,6 +66,7 @@
       </nav>
 
       <div class="tabpanel" role="tabpanel" id="panel-census" aria-labelledby="tab-census">
+        <section class="species-card" id="species-card" hidden></section>
         <dl class="stats">
           <div><dt>Creatures</dt><dd id="st-pop">0</dd></div>
           <div><dt>Species</dt><dd id="st-species">0</dd></div>
@@ -76,6 +77,10 @@
           <div class="section-head"><h2>Population</h2><small id="pop-span">last 0 days</small></div>
           <canvas class="chart" id="pop-chart" height="150"></canvas>
           <div class="legend" id="pop-legend"></div>
+        </section>
+        <section>
+          <div class="section-head"><h2>Evolution</h2><small>population averages</small></div>
+          <div class="trends" id="trends"></div>
         </section>
         <section>
           <div class="section-head"><h2>Living species</h2><small>tap one to highlight it</small></div>

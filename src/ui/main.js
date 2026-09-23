@@ -1,8 +1,10 @@
 import { World, TICKS_PER_DAY } from '../sim/world.js';
 import { theme, watchTheme, speciesColor } from './theme.js';
 import { Camera, drawPool, pickCreature } from './render.js';
-import { drawPopulation, drawLineage, lineageRows, drawBrain } from './charts.js';
-import { esc, renderSpeciesList, renderSpecimenShell, updateSpecimen, renderLogEntry } from './panels.js';
+import { drawPopulation, drawLineage, lineageRows, drawBrain, drawTrend, TRENDS } from './charts.js';
+import {
+  esc, renderSpeciesList, renderSpecimenShell, updateSpecimen, renderLogEntry, renderTrends, renderSpeciesCard,
+} from './panels.js';
 
 const $ = (id) => document.getElementById(id);
 const WARMUP_TICKS = TICKS_PER_DAY * 5;
@@ -22,6 +24,7 @@ const state = {
   dirtyPanels: true,
   lastPanel: 0,
   lineage: null,
+  notice: null,
 };
 
 const canvas = $('pool');
@@ -46,19 +49,48 @@ function newWorld(seed) {
   const rect = canvas.getBoundingClientRect();
   const aspect = rect.width > 0 && rect.height > 0 ? rect.height / rect.width : 0.625;
   const height = Math.round(Math.min(1400, Math.max(800, 1600 * aspect)) / 50) * 50;
-  state.world = new World({ seed, width: 1600, height });
-  state.world.onEvent = onEvent;
+  adopt(new World({ seed, width: 1600, height }), WARMUP_TICKS);
+}
+
+function adopt(world, warmup) {
+  state.world = world;
+  world.onEvent = onEvent;
   state.selected = null;
   state.following = false;
   state.focusSpecies = null;
-  state.warming = WARMUP_TICKS;
-  $('clock-seed').textContent = seed;
-  $('log').innerHTML = '';
-  for (const ev of state.world.events) onEvent(ev);
+  state.warming = warmup;
+  $('clock-seed').textContent = world.seed;
+  rebuildLog();
   resize();
-  cam.fit(state.world);
+  cam.fit(world);
   renderSpecimen();
   state.dirtyPanels = true;
+}
+
+// ------------------------------------------------------------------ saving
+
+const SAVE_KEY = 'tidepool.save.v1';
+
+function save() {
+  if (!state.world || state.warming > 0) return;
+  try {
+    localStorage.setItem(SAVE_KEY, JSON.stringify(state.world.toJSON()));
+  } catch {
+    // Storage may be full or unavailable (private windows); the pool just won't resume.
+  }
+}
+
+function loadSaved() {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    return raw ? World.fromJSON(JSON.parse(raw)) : null;
+  } catch {
+    return null;
+  }
+}
+
+function notify(text, ms = 7000) {
+  state.notice = { text, until: performance.now() + ms };
 }
 
 function onEvent(ev) {
@@ -101,7 +133,10 @@ function frame(now) {
       world.step();
       state.warming--;
     }
-    if (state.warming <= 0) state.dirtyPanels = true;
+    if (state.warming <= 0) {
+      state.dirtyPanels = true;
+      save();
+    }
   } else if (!state.paused) {
     const target = TICKS_PER_FRAME[state.speed];
     let n = 0;
@@ -145,6 +180,7 @@ function updateHud() {
   $('scale-label').textContent = `${um} µm`;
 
   const chips = [];
+  if (state.notice && performance.now() < state.notice.until) chips.push(`<span class="chip">${esc(state.notice.text)}</span>`);
   if (state.warming > 0) {
     chips.push(`<span class="chip">Fast-forwarding the first days… ${Math.round((1 - state.warming / WARMUP_TICKS) * 100)}%</span>`);
   }
@@ -178,7 +214,17 @@ function updatePanels() {
     const first = world.samples[0]?.tick ?? 0;
     $('pop-span').textContent = `days ${(first / TICKS_PER_DAY).toFixed(0)}–${world.day.toFixed(0)}`;
     drawPopulation($('pop-chart'), world, $('pop-legend'));
+    renderTrends($('trends'), world, TRENDS, drawTrend, theme.accent);
     renderSpeciesList($('species-list'), world, state.focusSpecies, focusSpecies);
+    renderSpeciesCard($('species-card'), world, state.focusSpecies, {
+      member: (id) => {
+        const members = world.creatures.filter((c) => c.speciesId === id);
+        if (!members.length) return;
+        select(members[Math.floor(Math.random() * members.length)]);
+        setTab('specimen');
+      },
+      close: () => focusSpecies(state.focusSpecies),
+    });
   } else if (state.tab === 'lineage') {
     const rows = lineageRows(world);
     $('lineage-count').textContent = `${rows.length} shown of ${world.speciesOrder.length} species`;
@@ -219,6 +265,7 @@ function renderSpecimen() {
 function focusSpecies(id) {
   state.focusSpecies = state.focusSpecies === id ? null : id;
   state.dirtyPanels = true;
+  if (state.focusSpecies && state.tab === 'census') $('panel-census').scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function setTab(tab) {
@@ -375,6 +422,11 @@ $('new-pool').addEventListener('click', () => {
     // Some frames refuse history changes; the pool still resets.
   }
   newWorld(seed);
+  try {
+    localStorage.removeItem(SAVE_KEY);
+  } catch {
+    // Nothing saved, or storage unavailable.
+  }
 });
 
 for (const name of ['census', 'lineage', 'specimen', 'log']) $(`tab-${name}`).addEventListener('click', () => setTab(name));
@@ -439,5 +491,15 @@ watchTheme(() => {
   }
 });
 
-newWorld(seedFromHash() ?? 'tidepool');
+const hashSeed = seedFromHash();
+const saved = hashSeed ? null : loadSaved();
+if (saved) {
+  adopt(saved, 0);
+  notify(`Welcome back. Your pool resumes on day ${saved.day.toFixed(1)}.`);
+} else {
+  newWorld(hashSeed ?? 'tidepool');
+}
+setInterval(save, 15000);
+document.addEventListener('visibilitychange', () => document.visibilityState === 'hidden' && save());
+window.addEventListener('pagehide', save);
 requestAnimationFrame(frame);

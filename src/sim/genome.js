@@ -89,3 +89,26 @@ export function serializeGenome(g) {
 export function deserializeGenome(o) {
   return { traits: { ...o.traits }, weights: Float32Array.from(o.weights) };
 }
+
+// Compact, exact encoding of float arrays for save files.
+export function packFloats(arr) {
+  const bytes = new Uint8Array(Float32Array.from(arr).buffer);
+  let bin = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(bin);
+}
+
+export function unpackFloats(str) {
+  const bin = atob(str);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new Float32Array(bytes.buffer);
+}
+
+export function packGenome(g) {
+  return { traits: { ...g.traits }, weights: packFloats(g.weights) };
+}
+
+export function unpackGenome(o) {
+  return { traits: { ...o.traits }, weights: o.weights ? unpackFloats(o.weights) : new Float32Array(WEIGHT_COUNT) };
+}
