@@ -302,9 +302,10 @@ function setTab(tab) {
     $(`panel-${name}`).hidden = name !== tab;
   }
   if (tab === 'specimen' && !state.selected && state.world.creatures.length) {
-    // Open on something alive rather than an empty panel: pick the eldest.
-    const eldest = state.world.creatures.reduce((a, b) => (b.age > a.age ? b : a));
-    select(eldest);
+    // Open on something rather than an empty panel: a well-fed adult with
+    // plenty of life left, so it doesn't die the moment you look at it.
+    const prime = (c) => (c.age >= c.maturity ? 1 : 0.3) * (c.energy / c.maxEnergy) * (1 - c.age / c.lifespan);
+    select(state.world.creatures.reduce((a, b) => (prime(b) > prime(a) ? b : a)));
   }
   state.dirtyPanels = true;
 }

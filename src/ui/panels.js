@@ -76,7 +76,7 @@ export function renderSpecimenShell(el, world, c, handlers) {
     <div class="specimen-head">
       <div class="eyebrow">Specimen no. ${c.id}</div>
       <h2 style="color:${speciesColor(sp.hue)}">${esc(sp.name)}</h2>
-      <p>Generation ${c.generation} · ${parentSp ? `descended from <i>${esc(parentSp.name)}</i>` : 'a founding lineage'}</p>
+      <p>Generation ${c.generation} · ${parentSp ? `its species branched from <i>${esc(parentSp.name)}</i>` : 'member of a founding species'}</p>
     </div>
     <div class="row-actions">
       <span class="status" data-f="status"></span>
