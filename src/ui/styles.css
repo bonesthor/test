@@ -410,10 +410,10 @@ button {
 }
 
 .tabs button {
-  flex: 1;
+  flex: 1 1 auto;
   border: 0;
   background: none;
-  padding: 11px 4px 9px;
+  padding: 11px 2px 9px;
   cursor: pointer;
   color: var(--muted);
   font-size: 13px;
@@ -552,6 +552,25 @@ button {
 .trend small {
   font: 11px var(--mono);
   color: var(--muted);
+}
+
+/* deaths */
+
+.deathbar {
+  display: flex;
+  height: 10px;
+  border-radius: 5px;
+  overflow: hidden;
+  background: var(--rule-soft);
+}
+
+.deathbar span {
+  background: var(--c);
+  min-width: 2px;
+}
+
+.deathbar span + span {
+  border-left: 2px solid var(--surface);
 }
 
 /* species card */
@@ -857,6 +876,106 @@ button {
   margin: 0;
   color: var(--muted);
   max-width: 44ch;
+}
+
+/* lab */
+
+.lab-preview {
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--rule);
+  background: var(--pool);
+}
+
+.lab-caption {
+  display: grid;
+  gap: 2px;
+  padding: 8px 12px 10px;
+  background: var(--raised);
+  border-top: 1px solid var(--rule);
+}
+
+.lab-caption i {
+  font: italic 400 20px/1.2 var(--display);
+}
+
+.lab-caption small {
+  font: 11px/1.4 var(--mono);
+  color: var(--muted);
+}
+
+.presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.presets .btn {
+  padding: 4px 10px;
+  font-size: 12.5px;
+}
+
+.lab-form {
+  display: grid;
+  gap: 4px;
+}
+
+.slider {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr) 72px;
+  align-items: center;
+  gap: 10px;
+  font-size: 12.5px;
+}
+
+.slider output {
+  font: 12px var(--mono);
+  text-align: right;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+.slider input {
+  width: 100%;
+  accent-color: var(--accent);
+}
+
+.slider.hue input,
+.slider.diet input {
+  appearance: none;
+  -webkit-appearance: none;
+  height: 8px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, hsl(0 70% 55%), hsl(60 70% 55%), hsl(120 70% 50%), hsl(180 70% 50%), hsl(240 70% 60%), hsl(300 70% 55%), hsl(360 70% 55%));
+}
+
+.slider.diet input {
+  background: linear-gradient(90deg, var(--grazer), var(--omnivore), var(--hunter));
+}
+
+.slider.hue input::-webkit-slider-thumb,
+.slider.diet input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--raised);
+  border: 2px solid var(--ink);
+  cursor: pointer;
+}
+
+.slider.hue input::-moz-range-thumb,
+.slider.diet input::-moz-range-thumb {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--raised);
+  border: 2px solid var(--ink);
+  cursor: pointer;
+}
+
+#pool[data-tool='release'] {
+  cursor: copy;
 }
 
 /* log */

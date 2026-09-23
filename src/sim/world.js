@@ -1,8 +1,11 @@
 import { Rng } from './rng.js';
 import { SpatialGrid } from './grid.js';
 import { SECTORS, IN, OUT, createBrainState, think } from './brain.js';
-import { primordialGenome, mutate, geneticDistance, cloneGenome, packGenome, unpackGenome, packFloats, unpackFloats } from './genome.js';
-import { makeGenus, makeEpithet } from './names.js';
+import {
+  TRAITS, TRAIT_KEYS, primordialGenome, mutate, geneticDistance, cloneGenome, packGenome, unpackGenome, packFloats,
+  unpackFloats,
+} from './genome.js';
+import { makeGenus, makeEpithet, roman } from './names.js';
 
 export const TICKS_PER_DAY = 600;
 const SAMPLE_CAP = 1000;
@@ -64,6 +67,7 @@ export class World {
     this.totalKills = 0;
     this.firstKill = false;
     this.firstCarnivore = false;
+    this.deaths = { starvation: 0, predation: 0, age: 0 };
     this.foodDebt = 0;
     this.sampleEvery = 60;
     this.samples = [];
@@ -129,6 +133,40 @@ export class World {
     this.log('seed', message, ids);
   }
 
+  // A species designed by hand in the Lab and released as a founding population.
+  introduce(traits, { count = 12, x, y, name } = {}) {
+    const genome = primordialGenome(this.rng, traits.diet > 0.45);
+    for (const key of TRAIT_KEYS) {
+      if (traits[key] === undefined) continue;
+      const t = TRAITS[key];
+      genome.traits[key] = Math.min(t.max, Math.max(t.min, traits[key]));
+    }
+    const extra = { designed: true };
+    if (name) {
+      // Keep the designer's chosen name, numbering repeat releases.
+      let epithet = name.epithet;
+      for (let n = 2; this.speciesOrder.some((s) => s.genus === name.genus && s.epithet === epithet); n++) {
+        epithet = `${name.epithet} ${roman(n)}`;
+      }
+      Object.assign(extra, { genus: name.genus, epithet, name: `${name.genus} ${epithet}` });
+    }
+    const sp = this.createSpecies(genome, null, extra);
+    for (let i = 0; i < count; i++) {
+      const g = i === 0 ? cloneGenome(genome) : mutate(genome, this.rng);
+      const px = x === undefined ? this.rng.range(40, this.width - 40) : x + this.rng.gauss() * 30;
+      const py = y === undefined ? this.rng.range(40, this.height - 40) : y + this.rng.gauss() * 30;
+      const c = this.spawnCreature(g, sp.id, {
+        x: Math.min(this.width - 5, Math.max(5, px)),
+        y: Math.min(this.height - 5, Math.max(5, py)),
+        generation: 0,
+      });
+      c.energy = c.maxEnergy * 0.7;
+      c.age = Math.round(c.maturity * this.rng.range(0.6, 1));
+    }
+    this.log('seed', `You release ${count} ${sp.name} into the pool.`, [sp.id]);
+    return sp;
+  }
+
   spawnCreature(genome, speciesId, { x, y, angle, generation, parentId = null }) {
     const t = genome.traits;
     const s = t.size;
@@ -180,12 +218,13 @@ export class World {
     if (sp.population > sp.peak) sp.peak = sp.population;
     this.totalBorn++;
     if (generation > this.maxGeneration) this.maxGeneration = generation;
+    this.onBirth?.(c);
     return c;
   }
 
   // ------------------------------------------------------------- species
 
-  createSpecies(founder, parentId) {
+  createSpecies(founder, parentId, extra = {}) {
     const parent = parentId ? this.species.get(parentId) : null;
     const taken = (epithet) => this.speciesOrder.some((s) => s.genus === genus && s.epithet === epithet);
     let genus;
@@ -217,6 +256,8 @@ export class World {
       history: [],
       closed: false,
       depth: parent ? parent.depth + 1 : 0,
+      designed: false,
+      ...extra,
     };
     this.species.set(sp.id, sp);
     this.speciesOrder.push(sp);
@@ -664,6 +705,8 @@ export class World {
     c.cause = cause;
     c.killerId = killer ? killer.id : null;
     c.diedTick = this.tick;
+    this.deaths[cause]++;
+    this.onDeath?.(c, cause, killer);
     const remains = this.carcassEnergy(c) - eaten;
     if (remains > 2) this.dropCarrion(c.x, c.y, remains, 1 + Math.floor(c.genome.traits.size * 1.5));
     const sp = this.species.get(c.speciesId);
@@ -705,6 +748,7 @@ export class World {
       sense: sense / n,
       species: this.livingSpecies().length,
       season: this.season,
+      deaths: { ...this.deaths },
     });
     const idx = this.samples.length - 1;
     for (const sp of this.speciesOrder) {
@@ -756,6 +800,7 @@ World.prototype.toJSON = function toJSON() {
   out.upwellings = this.upwellings.map((u) => ({ ...u }));
   out.food = [];
   for (const f of this.food) out.food.push(f.x, f.y, f.energy, f.kind, f.age);
+  out.deaths = { ...this.deaths };
   out.samples = this.samples;
   out.events = this.events;
   out.species = this.speciesOrder.map((sp) => {
@@ -786,6 +831,7 @@ World.fromJSON = function fromJSON(data) {
     const [x, y, energy, kind, age] = data.food.slice(i, i + 5);
     w.food.push({ x, y, energy, kind, age, alive: true });
   }
+  w.deaths = { starvation: 0, predation: 0, age: 0, ...data.deaths };
   w.samples = data.samples;
   w.events = data.events;
   w.speciesOrder = data.species.map((o) => ({ ...o, founder: unpackGenome(o.founder) }));

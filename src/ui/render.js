@@ -97,11 +97,11 @@ export function drawPool(ctx, world, cam, view) {
   const selected = view.selected;
   if (focus) {
     ctx.globalAlpha = 0.18;
-    for (const c of world.creatures) if (c.speciesId !== focus) drawCreature(ctx, world, c, px, m);
+    for (const c of world.creatures) if (c.speciesId !== focus) drawCreature(ctx, c, world.species.get(c.speciesId).hue, px, m);
     ctx.globalAlpha = 1;
-    for (const c of world.creatures) if (c.speciesId === focus) drawCreature(ctx, world, c, px, m);
+    for (const c of world.creatures) if (c.speciesId === focus) drawCreature(ctx, c, world.species.get(c.speciesId).hue, px, m);
   } else {
-    for (const c of world.creatures) drawCreature(ctx, world, c, px, m);
+    for (const c of world.creatures) drawCreature(ctx, c, world.species.get(c.speciesId).hue, px, m);
   }
 
   ctx.setTransform(m.k, 0, 0, m.k, m.e, m.f);
@@ -139,8 +139,9 @@ function drawGrid(ctx, world, cam, px) {
   ctx.stroke();
 }
 
-function drawCreature(ctx, world, c, px, m) {
-  const sp = world.species.get(c.speciesId);
+// Draws one creature in its own frame. `m` maps world units to device
+// pixels (device = k * world + (e, f)); `px` is one screen pixel in world units.
+export function drawCreature(ctx, c, hue, px, m) {
   const t = c.genome.traits;
   const r = c.radius;
   const energy = Math.max(0, Math.min(1, c.energy / c.maxEnergy));
@@ -152,7 +153,7 @@ function drawCreature(ctx, world, c, px, m) {
   ctx.setTransform(m.k * cos, m.k * sin, -m.k * sin, m.k * cos, m.e + m.k * c.x, m.f + m.k * c.y);
 
   if (theme.dark) {
-    ctx.fillStyle = speciesColor(sp.hue, 0.1);
+    ctx.fillStyle = speciesColor(hue, 0.1);
     ctx.beginPath();
     ctx.arc(0, 0, r * 2.3, 0, TAU);
     ctx.fill();
@@ -161,7 +162,7 @@ function drawCreature(ctx, world, c, px, m) {
   // Tail: a flagellum that beats faster the harder it swims.
   const len = r * (1.1 + Math.max(0, c.thrust) * 0.9);
   const wag = Math.sin(c.wiggle) * r * 0.55;
-  ctx.strokeStyle = speciesColor(sp.hue, 0.75);
+  ctx.strokeStyle = speciesColor(hue, 0.75);
   ctx.lineWidth = Math.max(r * 0.28, px);
   ctx.lineCap = 'round';
   ctx.beginPath();
@@ -182,7 +183,7 @@ function drawCreature(ctx, world, c, px, m) {
   }
 
   // Body: fuller colour when well fed.
-  ctx.fillStyle = speciesColor(sp.hue, Math.round((0.45 + 0.55 * energy) * 10) / 10);
+  ctx.fillStyle = speciesColor(hue, Math.round((0.45 + 0.55 * energy) * 10) / 10);
   ctx.beginPath();
   ctx.ellipse(0, 0, r * 1.15, r * 0.82, 0, 0, TAU);
   ctx.fill();

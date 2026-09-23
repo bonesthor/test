@@ -260,3 +260,30 @@ export function renderSpeciesCard(el, world, id, handlers) {
   }
   el.querySelector('[data-act=member]').hidden = !members.length;
 }
+
+// ---------------------------------------------------------------- deaths
+
+const CAUSE_ROWS = [
+  ['starvation', 'Starved', 'var(--omnivore)'],
+  ['predation', 'Eaten', 'var(--hunter)'],
+  ['age', 'Old age', 'var(--muted)'],
+];
+
+export function renderDeaths(el, spanEl, world, windowDays = 2) {
+  const samples = world.samples;
+  const last = samples.at(-1);
+  const cutoff = world.tick - windowDays * TICKS_PER_DAY;
+  const first = samples.find((s) => s.tick >= cutoff && s.deaths) ?? samples.find((s) => s.deaths);
+  if (!last?.deaths || !first) {
+    el.innerHTML = '<p class="note">No deaths recorded yet.</p>';
+    return;
+  }
+  const counts = CAUSE_ROWS.map(([k]) => Math.max(0, world.deaths[k] - first.deaths[k]));
+  const total = counts.reduce((a, b) => a + b, 0);
+  spanEl.textContent = `last ${Math.min(windowDays, (world.tick - first.tick) / TICKS_PER_DAY).toFixed(1)} days · ${total}`;
+  const bar = CAUSE_ROWS.map(([k, label, c], i) =>
+    counts[i] ? `<span style="--c:${c};flex:${counts[i]}" title="${label}: ${counts[i]}"></span>` : '').join('');
+  el.innerHTML = `<div class="deathbar" role="img" aria-label="${CAUSE_ROWS.map(([, l], i) => `${l} ${counts[i]}`).join(', ')}">${bar}</div>
+    <div class="legend">${CAUSE_ROWS.map(([, label, c], i) =>
+      `<span style="--c:${c}">${label} ${total ? Math.round((counts[i] / total) * 100) : 0}%</span>`).join('')}</div>`;
+}

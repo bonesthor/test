@@ -28,8 +28,19 @@ slightly mutated genes and wiring, and the pool sorts out the rest.
   timeline.
 - **A live brain.** Click any creature to see its vision cone and every
   synapse firing in real time, alongside its genome and life story.
+- **Evolution at a glance.** Sparklines of mean body size, carnivory,
+  muscle and eyesight, and a running tally of what's killing everyone.
 - **A field log.** Speciations, extinctions, first blood, seasons and
   immigration events, with dates.
+- **The Lab.** Design your own species with sliders and presets, and watch
+  it swim in a live preview. The Lab shows its energy budget. Click in the
+  pool to release a founding population and see whether it survives.
+- **Sound (optional).** A quiet generative score. Births pluck pentatonic
+  notes pitched by pigment, kills thump, new species chime, extinctions fall,
+  and the sea swells with the seasons.
+- **It remembers.** Your pool autosaves in the browser and picks up exactly
+  where it left off. Save files include the random-number state, so a
+  resumed pool carries on exactly as it would have.
 
 ## Controls
 
@@ -37,6 +48,8 @@ slightly mutated genes and wiring, and the pool sorts out the rest.
 | --- | --- |
 | Examine a creature | Click it (Inspect tool) |
 | Scatter plankton | Feed tool, then click or drag (`F`) |
+| Release a designed species | Lab tab → **Release**, then click in the pool |
+| Sound on/off | **Sound** button (`M`) |
 | Pan / zoom | Drag / scroll wheel or pinch |
 | Pause, speed | `Space`, `1`–`4` |
 | Highlight a species | Click it in Census, Lineage or the log |
@@ -51,7 +64,8 @@ src/sim/      the simulation: pure JS, no DOM, deterministic per seed
   genome.js   traits, mutation, genetic distance
   world.js    physics, senses, eating, biting, breeding, speciation, records
   names.js    trait-driven binomial names
-src/ui/       canvas renderer, charts and panels
+  grid.js     spatial hash for neighbour queries
+src/ui/       canvas renderer, charts, panels, the Lab and the soundscape
 scripts/      build (esbuild → one HTML file) and a headless runner
 test/         node:test suite
 ```

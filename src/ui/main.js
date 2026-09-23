@@ -1,15 +1,19 @@
 import { World, TICKS_PER_DAY } from '../sim/world.js';
 import { theme, watchTheme, speciesColor } from './theme.js';
 import { Camera, drawPool, pickCreature } from './render.js';
+import { Lab } from './lab.js';
+import { Soundscape } from './sound.js';
 import { drawPopulation, drawLineage, lineageRows, drawBrain, drawTrend, TRENDS } from './charts.js';
 import {
   esc, renderSpeciesList, renderSpecimenShell, updateSpecimen, renderLogEntry, renderTrends, renderSpeciesCard,
+  renderDeaths,
 } from './panels.js';
 
 const $ = (id) => document.getElementById(id);
 const WARMUP_TICKS = TICKS_PER_DAY * 5;
 const SEED_WORDS = ['kelp', 'coral', 'brine', 'shoal', 'reef', 'lagoon', 'eddy', 'surf', 'tide', 'spray', 'drift', 'wrack'];
 const TICKS_PER_FRAME = { 1: 2, 4: 8, 16: 32, 64: Infinity };
+const TABS = ['census', 'lineage', 'specimen', 'log', 'lab'];
 
 const state = {
   world: null,
@@ -25,11 +29,14 @@ const state = {
   lastPanel: 0,
   lineage: null,
   notice: null,
+  pending: null,
+  lastFrame: null,
 };
 
 const canvas = $('pool');
 const ctx = canvas.getContext('2d');
 const cam = new Camera();
+const sound = new Soundscape();
 const view = { dpr: 1, get focusSpecies() { return state.focusSpecies; }, get selected() { return state.selected; } };
 
 // ------------------------------------------------------------------ setup
@@ -55,6 +62,8 @@ function newWorld(seed) {
 function adopt(world, warmup) {
   state.world = world;
   world.onEvent = onEvent;
+  world.onBirth = (c) => state.warming <= 0 && sound.birth(world.species.get(c.speciesId).hue);
+  world.onDeath = (c, cause) => state.warming <= 0 && cause === 'predation' && sound.kill();
   state.selected = null;
   state.following = false;
   state.focusSpecies = null;
@@ -94,6 +103,10 @@ function notify(text, ms = 7000) {
 }
 
 function onEvent(ev) {
+  if (state.warming <= 0 && ev.tick === state.world?.tick) {
+    if (ev.kind === 'speciation') sound.speciation();
+    if (ev.kind === 'extinction') sound.extinction();
+  }
   const log = $('log');
   if (!log) return;
   log.prepend(renderLogEntry(state.world, ev, focusSpecies));
@@ -157,6 +170,8 @@ function frame(now) {
   updateHud();
 
   if (state.tab === 'specimen' && state.selected) drawBrain($('brain-chart'), state.selected);
+  if (state.tab === 'lab') lab.draw(Math.min(50, now - (state.lastFrame ?? now)));
+  state.lastFrame = now;
   if (state.dirtyPanels || now - state.lastPanel > 300) {
     state.lastPanel = now;
     state.dirtyPanels = false;
@@ -196,6 +211,14 @@ function updateHud() {
     chips.push(`<span class="chip">Following no. ${state.selected.id}<button type="button" data-clear="follow" aria-label="Stop following">×</button></span>`);
   }
   if (state.tool === 'feed') chips.push('<span class="chip">Click or drag in the pool to scatter plankton</span>');
+  if (state.tool === 'release' && state.pending) {
+    const { name, count, traits } = state.pending;
+    chips.push(
+      `<span class="chip">Click in the pool to release ${count} <i style="color:${speciesColor(traits.hue)}">${esc(
+        `${name.genus} ${name.epithet}`,
+      )}</i><button type="button" data-clear="release" aria-label="Cancel release">×</button></span>`,
+    );
+  }
   const html = chips.join('');
   const holder = $('pool-chips');
   if (holder.dataset.html !== html) {
@@ -206,6 +229,7 @@ function updateHud() {
 
 function updatePanels() {
   const world = state.world;
+  sound.season(world.season);
   if (state.tab === 'census') {
     $('st-pop').textContent = world.creatures.length;
     $('st-species').textContent = `${world.livingSpecies().length}/${world.speciesOrder.length}`;
@@ -215,6 +239,7 @@ function updatePanels() {
     $('pop-span').textContent = `days ${(first / TICKS_PER_DAY).toFixed(0)}–${world.day.toFixed(0)}`;
     drawPopulation($('pop-chart'), world, $('pop-legend'));
     renderTrends($('trends'), world, TRENDS, drawTrend, theme.accent);
+    renderDeaths($('deaths'), $('deaths-span'), world);
     renderSpeciesList($('species-list'), world, state.focusSpecies, focusSpecies);
     renderSpeciesCard($('species-card'), world, state.focusSpecies, {
       member: (id) => {
@@ -270,7 +295,7 @@ function focusSpecies(id) {
 
 function setTab(tab) {
   state.tab = tab;
-  for (const name of ['census', 'lineage', 'specimen', 'log']) {
+  for (const name of TABS) {
     $(`tab-${name}`).setAttribute('aria-selected', String(name === tab));
     $(`panel-${name}`).hidden = name !== tab;
   }
@@ -287,7 +312,16 @@ function setSpeed(speed) {
   for (const b of $('speed').children) b.setAttribute('aria-pressed', String(Number(b.dataset.speed) === speed));
 }
 
+function release(design, at) {
+  const sp = state.world.introduce(design.traits, { count: design.count, name: design.name, ...(at ?? {}) });
+  setTool('inspect');
+  state.focusSpecies = sp.id;
+  state.dirtyPanels = true;
+  notify(`Released ${design.count} ${sp.name}. Good luck to them.`);
+}
+
 function setTool(tool) {
+  if (tool !== 'release') state.pending = null;
   state.tool = tool;
   canvas.dataset.tool = tool;
   for (const b of $('tool').children) b.setAttribute('aria-pressed', String(b.dataset.tool === tool));
@@ -320,6 +354,12 @@ canvas.addEventListener('pointerdown', (e) => {
     return;
   }
   gesture = { kind: 'press', start: p, last: p, moved: false };
+  if (state.tool === 'release' && state.pending) {
+    const w = cam.toWorld(p.x, p.y);
+    release(state.pending, w);
+    gesture.kind = 'done';
+    return;
+  }
   if (state.tool === 'feed') {
     const w = cam.toWorld(p.x, p.y);
     state.world.sprinkle(w.x, w.y);
@@ -406,6 +446,21 @@ $('zoom-fit').addEventListener('click', () => {
 });
 
 $('play').addEventListener('click', () => setPaused(!state.paused));
+$('sound').addEventListener('click', toggleSound);
+
+async function toggleSound() {
+  const on = !sound.enabled;
+  try {
+    if (on) await sound.enable();
+    else sound.disable();
+  } catch {
+    notify('This browser would not start audio.');
+    return;
+  }
+  $('sound').setAttribute('aria-pressed', String(on));
+  $('sound-label').textContent = on ? 'Sound on' : 'Sound off';
+  $('sound-waves').hidden = !on;
+}
 $('speed').addEventListener('click', (e) => {
   const b = e.target.closest('button[data-speed]');
   if (b) setSpeed(Number(b.dataset.speed));
@@ -429,13 +484,14 @@ $('new-pool').addEventListener('click', () => {
   }
 });
 
-for (const name of ['census', 'lineage', 'specimen', 'log']) $(`tab-${name}`).addEventListener('click', () => setTab(name));
+for (const name of TABS) $(`tab-${name}`).addEventListener('click', () => setTab(name));
 
 $('pool-chips').addEventListener('click', (e) => {
   const b = e.target.closest('button[data-clear]');
   if (!b) return;
   if (b.dataset.clear === 'focus') state.focusSpecies = null;
   if (b.dataset.clear === 'follow') state.following = false;
+  if (b.dataset.clear === 'release') setTool('inspect');
   state.dirtyPanels = true;
 });
 
@@ -475,8 +531,10 @@ window.addEventListener('keydown', (e) => {
     setPaused(!state.paused);
   } else if (['1', '2', '3', '4'].includes(e.key)) setSpeed([1, 4, 16, 64][Number(e.key) - 1]);
   else if (e.key === 'f' || e.key === 'F') setTool('feed');
+  else if (e.key === 'm' || e.key === 'M') toggleSound();
   else if (e.key === 'i' || e.key === 'I') setTool('inspect');
   else if (e.key === 'Escape') {
+    if (state.tool === 'release') return setTool('inspect');
     select(null);
     state.focusSpecies = null;
   }
@@ -488,7 +546,17 @@ watchTheme(() => {
   if (state.world) {
     rebuildLog();
     renderSpecimen();
+    lab.sync(false);
   }
+});
+
+const lab = new Lab($('panel-lab'), {
+  onRelease: (design, place) => {
+    if (!place) return release(design, null);
+    state.pending = design;
+    setTool('release');
+    if (window.matchMedia('(max-width: 900px)').matches) canvas.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  },
 });
 
 const hashSeed = seedFromHash();

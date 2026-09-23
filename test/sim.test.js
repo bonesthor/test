@@ -193,3 +193,37 @@ test('a saved world resumes exactly where it left off', () => {
 test('save files reject unknown formats', () => {
   assert.throws(() => World.fromJSON({ version: 99 }), /save format/);
 });
+
+test('designed species can be released into the pool', () => {
+  const world = new World({ seed: 'lab' });
+  const before = world.creatures.length;
+  const sp = world.introduce({ size: 2, diet: 0.9, speed: 1.4, hue: 200, sense: 999 }, { count: 9, x: 400, y: 300 });
+  assert.equal(world.creatures.length, before + 9);
+  assert.equal(sp.population, 9);
+  assert.equal(sp.designed, true);
+  assert.equal(sp.founder.traits.sense, 220, 'traits are clamped to their range');
+  assert.equal(sp.founder.traits.diet, 0.9);
+  const members = world.creatures.filter((c) => c.speciesId === sp.id);
+  for (const c of members) assert.ok(Math.hypot(c.x - 400, c.y - 300) < 200);
+  assert.match(world.events.at(-1).text, /You release 9/);
+  for (let i = 0; i < 600; i++) world.step();
+});
+
+test('deaths are tallied by cause', () => {
+  const world = new World({ seed: 'census' });
+  for (let i = 0; i < TICKS_PER_DAY * 3; i++) world.step();
+  const d = world.deaths;
+  assert.ok(d.starvation + d.predation + d.age > 0);
+  const sampled = world.samples.at(-1).deaths;
+  for (const k of Object.keys(d)) assert.ok(sampled[k] <= d[k]);
+  const restored = World.fromJSON(JSON.parse(JSON.stringify(world.toJSON())));
+  assert.deepEqual(restored.deaths, world.deaths);
+});
+
+test('released species keep their designed name, numbered on repeats', () => {
+  const world = new World({ seed: 'names' });
+  const a = world.introduce({ diet: 0.1 }, { count: 4, name: { genus: 'Testella', epithet: 'prima' } });
+  const b = world.introduce({ diet: 0.1 }, { count: 4, name: { genus: 'Testella', epithet: 'prima' } });
+  assert.equal(a.name, 'Testella prima');
+  assert.equal(b.name, 'Testella prima ii');
+});
