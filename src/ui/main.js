@@ -43,7 +43,7 @@ const view = { dpr: 1, get focusSpecies() { return state.focusSpecies; }, get se
 
 function seedFromHash() {
   const h = decodeURIComponent(location.hash.slice(1));
-  return /^[\w.~-]{1,40}$/.test(h) && !h.startsWith('panel') ? h : null;
+  return /^[\w.~-]{1,40}$/.test(h) ? h : null;
 }
 
 function randomSeed() {
@@ -540,7 +540,7 @@ lineageCanvas.addEventListener('click', (e) => {
 });
 
 window.addEventListener('keydown', (e) => {
-  if (e.target.closest('input, textarea') || e.metaKey || e.ctrlKey || e.altKey) return;
+  if (e.target.closest('input, textarea, dialog') || e.metaKey || e.ctrlKey || e.altKey) return;
   if (e.key === ' ') {
     if (e.target.closest('button')) return;
     e.preventDefault();
@@ -575,9 +575,10 @@ const lab = new Lab($('panel-lab'), {
   },
 });
 
+// Resume the saved pool unless the link names a different one.
 const hashSeed = seedFromHash();
-const saved = hashSeed ? null : loadSaved();
-if (saved) {
+const saved = loadSaved();
+if (saved && (!hashSeed || hashSeed === saved.seed)) {
   adopt(saved, 0);
   notify(`Welcome back. Your pool resumes on day ${saved.day.toFixed(1)}.`);
 } else {

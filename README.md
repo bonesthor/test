@@ -4,6 +4,8 @@ An artificial-life ecosystem that evolves while you watch. Open
 [`dist/index.html`](dist/index.html) in any modern browser. It's one
 self-contained file with no server and no install.
 
+![Tidepool in dark mode: a pool of glowing creatures beside the specimen inspector, showing one creature's live neural network](docs/screenshot.png)
+
 Hundreds of microscopic creatures swim a 1.6 mm slide of seawater. Each has a
 **genome** (body size, diet, muscle, eyesight, field of view, breeding
 strategy, even its own mutation rate) and a **neural network** of 25 senses,
