@@ -2,7 +2,10 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { Rng } from '../src/sim/rng.js';
 import { WEIGHT_COUNT, N_IN, N_OUT, INPUTS, OUTPUTS, createBrainState, think, primordialWeights } from '../src/sim/brain.js';
-import { TRAITS, TRAIT_KEYS, primordialGenome, mutate, geneticDistance, cloneGenome, serializeGenome, deserializeGenome } from '../src/sim/genome.js';
+import {
+  TRAITS, TRAIT_KEYS, primordialGenome, mutate, geneticDistance, cloneGenome, serializeGenome, deserializeGenome,
+  genomeToCode, codeToGenome,
+} from '../src/sim/genome.js';
 import { roman, makeEpithet } from '../src/sim/names.js';
 import { World, TICKS_PER_DAY } from '../src/sim/world.js';
 
@@ -226,4 +229,22 @@ test('released species keep their designed name, numbered on repeats', () => {
   const b = world.introduce({ diet: 0.1 }, { count: 4, name: { genus: 'Testella', epithet: 'prima' } });
   assert.equal(a.name, 'Testella prima');
   assert.equal(b.name, 'Testella prima ii');
+});
+
+test('genome codes round-trip and transplant evolved brains', () => {
+  const rng = new Rng('code');
+  let g = primordialGenome(rng);
+  for (let i = 0; i < 30; i++) g = mutate(g, rng);
+  const code = genomeToCode(g);
+  assert.match(code, /^TP1\./);
+  const back = codeToGenome(`  ${code.slice(0, 40)}\n${code.slice(40)}  `);
+  assert.deepEqual(Array.from(back.weights), Array.from(g.weights));
+  for (const k of TRAIT_KEYS) assert.ok(Math.abs(back.traits[k] - g.traits[k]) < 1e-4);
+
+  const world = new World({ seed: 'transplant' });
+  const sp = world.introduce(back.traits, { count: 5, weights: back.weights });
+  assert.deepEqual(Array.from(sp.founder.weights), Array.from(g.weights));
+
+  assert.throws(() => codeToGenome('hello'), /start with/);
+  assert.throws(() => codeToGenome('TP1.!!!'), /damaged/);
 });

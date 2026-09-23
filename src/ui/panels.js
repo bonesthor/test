@@ -1,6 +1,6 @@
 import { speciesColor, dietClass, DIET_LABEL } from './theme.js';
 import { TICKS_PER_DAY, CAUSES } from '../sim/world.js';
-import { TRAITS } from '../sim/genome.js';
+import { TRAITS, genomeToCode } from '../sim/genome.js';
 
 export function esc(s) {
   return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -83,8 +83,10 @@ export function renderSpecimenShell(el, world, c, handlers) {
       <button class="btn" type="button" data-act="follow"></button>
       <button class="btn" type="button" data-act="species">Highlight species</button>
       <button class="btn" type="button" data-act="child" hidden>Examine its latest offspring</button>
+      <button class="btn" type="button" data-act="copy" title="Copy this genome, brain included, to release it in any pool from the Lab">Copy genome code</button>
       <button class="btn" type="button" data-act="clear">Close</button>
     </div>
+    <textarea class="code-box" data-f="code" rows="3" readonly hidden aria-label="Genome code"></textarea>
     <div class="meters">
       <div class="meter"><span>Energy</span><span class="track"><span class="fill" data-f="energy"></span></span><output data-f="energy-v"></output></div>
       <div class="meter"><span>Health</span><span class="track"><span class="fill" data-f="health"></span></span><output data-f="health-v"></output></div>
@@ -119,6 +121,25 @@ export function renderSpecimenShell(el, world, c, handlers) {
   el.querySelector('[data-act=species]').addEventListener('click', () => handlers.focusSpecies(c.speciesId));
   el.querySelector('[data-act=child]').addEventListener('click', handlers.child);
   el.querySelector('[data-act=clear]').addEventListener('click', handlers.clear);
+  el.querySelector('[data-act=copy]').addEventListener('click', () => {
+    const code = genomeToCode(c.genome);
+    const box = el.querySelector('[data-f=code]');
+    const showBox = () => {
+      box.value = code;
+      box.hidden = false;
+      box.focus();
+      box.select();
+      handlers.notify('Select and copy the genome code below, then paste it into the Lab.');
+    };
+    try {
+      navigator.clipboard.writeText(code).then(
+        () => handlers.notify('Genome code copied. Paste it into the Lab of any pool.'),
+        showBox,
+      );
+    } catch {
+      showBox();
+    }
+  });
 }
 
 export function updateSpecimen(el, world, c, following) {

@@ -35,6 +35,9 @@ slightly mutated genes and wiring, and the pool sorts out the rest.
 - **The Lab.** Design your own species with sliders and presets, and watch
   it swim in a live preview. The Lab shows its energy budget. Click in the
   pool to release a founding population and see whether it survives.
+- **Genome codes.** Copy any creature's complete genome, evolved brain and
+  all, as a text code. Paste it into the Lab of any pool, yours or a
+  friend's, to transplant that lineage.
 - **Sound (optional).** A quiet generative score. Births pluck pentatonic
   notes pitched by pigment, kills thump, new species chime, extinctions fall,
   and the sea swells with the seasons.
@@ -50,6 +53,8 @@ slightly mutated genes and wiring, and the pool sorts out the rest.
 | Scatter plankton | Feed tool, then click or drag (`F`) |
 | Release a designed species | Lab tab → **Release**, then click in the pool |
 | Sound on/off | **Sound** button (`M`) |
+| Share a creature | Specimen → **Copy genome code**; paste in Lab → **Transplant a genome** |
+| What am I looking at? | **About** (includes a key to the pool) |
 | Pan / zoom | Drag / scroll wheel or pinch |
 | Pause, speed | `Space`, `1`–`4` |
 | Highlight a species | Click it in Census, Lineage or the log |

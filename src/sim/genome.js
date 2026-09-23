@@ -112,3 +112,34 @@ export function packGenome(g) {
 export function unpackGenome(o) {
   return { traits: { ...o.traits }, weights: o.weights ? unpackFloats(o.weights) : new Float32Array(WEIGHT_COUNT) };
 }
+
+// Shareable genome codes: a compact text form of a full genome, brain
+// included, that can be pasted into another pool.
+const CODE_PREFIX = 'TP1.';
+
+export function genomeToCode(g) {
+  const traits = {};
+  for (const k of TRAIT_KEYS) traits[k] = Math.round(g.traits[k] * 1e4) / 1e4;
+  return CODE_PREFIX + btoa(JSON.stringify({ t: traits, w: packFloats(g.weights) }));
+}
+
+export function codeToGenome(code) {
+  const trimmed = String(code).replace(/\s+/g, '');
+  if (!trimmed.startsWith(CODE_PREFIX)) throw new Error('Genome codes start with "TP1."');
+  let data;
+  try {
+    data = JSON.parse(atob(trimmed.slice(CODE_PREFIX.length)));
+  } catch {
+    throw new Error('That genome code is incomplete or damaged.');
+  }
+  const weights = unpackFloats(data.w ?? '');
+  if (weights.length !== WEIGHT_COUNT) throw new Error('That genome code is from an incompatible brain layout.');
+  const traits = {};
+  for (const k of TRAIT_KEYS) {
+    const t = TRAITS[k];
+    const v = Number(data.t?.[k]);
+    if (!Number.isFinite(v)) throw new Error(`That genome code is missing the ${t.label.toLowerCase()} gene.`);
+    traits[k] = Math.min(t.max, Math.max(t.min, v));
+  }
+  return { traits, weights };
+}

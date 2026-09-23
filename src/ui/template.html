@@ -44,6 +44,7 @@
         <span id="sound-label">Sound off</span>
       </button>
       <button class="btn" id="new-pool" type="button">New pool</button>
+      <button class="btn" id="about-open" type="button">About</button>
     </div>
   </header>
 
@@ -105,6 +106,7 @@
             species and its width is its population. Thin connectors show which species each one branched from.
           </p>
         </section>
+        <p class="note" id="lineage-filter"></p>
         <div class="lineage-scroll" id="lineage-wrap">
           <canvas class="chart" id="lineage-chart"></canvas>
           <div class="tooltip" id="lineage-tip" hidden></div>
@@ -144,10 +146,54 @@
           <button class="btn primary" type="button" id="lab-release">Release 12 into the pool</button>
           <button class="btn" type="button" id="lab-random">Scatter at random</button>
         </div>
+        <section class="transplant">
+          <div class="section-head"><h2>Transplant a genome</h2><small>brain included</small></div>
+          <p class="note">
+            Paste a code from <b>Copy genome code</b> on any specimen, from this pool or someone else's. The evolved brain
+            comes with it; the sliders above still set the body.
+          </p>
+          <textarea class="code-box" id="lab-code" rows="3" placeholder="TP1.…" aria-label="Genome code"></textarea>
+          <div class="row-actions">
+            <button class="btn" type="button" id="lab-load">Load genome</button>
+            <button class="btn" type="button" id="lab-forget" hidden>Use starter reflexes instead</button>
+          </div>
+          <p class="note" id="lab-code-status" role="status"></p>
+        </section>
       </div>
     </aside>
   </main>
 </div>
+
+<dialog class="about" id="about" aria-labelledby="about-title">
+  <div class="about-head">
+    <h2 id="about-title">About Tide<i>pool</i></h2>
+    <button class="icon-btn" type="button" id="about-close" aria-label="Close">×</button>
+  </div>
+  <p>
+    Tidepool is an artificial-life simulation. Every creature carries a genome (body size, diet, muscle, eyesight,
+    breeding strategy, even its own mutation rate) and a small neural network that turns what it senses into how it
+    swims, turns and bites. Beyond a few newborn reflexes in the very first generation, none of that behaviour is
+    scripted.
+  </p>
+  <p>
+    Creatures that eat enough reproduce, passing on slightly mutated genes and wiring. When a lineage drifts far enough
+    from its founder, it is recorded as a new species and named for its most distinctive traits: <i>vorax</i> for
+    predators, <i>velox</i> for fast swimmers, <i>minuta</i> for the tiny.
+  </p>
+  <h3>Reading the pool</h3>
+  <ul class="key" id="about-key">
+    <li><canvas data-key="grazer"></canvas><span><b>Grazer.</b> Colour marks its species; related species share similar hues. The tail beats harder as it swims faster.</span></li>
+    <li><canvas data-key="hunter"></canvas><span><b>Hunter.</b> Meat-eaters grow mandibles, which snap open as they bite.</span></li>
+    <li><canvas data-key="hungry"></canvas><span><b>Faded body.</b> Running low on energy.</span></li>
+    <li><canvas data-key="bitten"></canvas><span><b>Red ring.</b> Just bitten.</span></li>
+    <li><canvas data-key="food"></canvas><span><b>Plankton and carrion.</b> Plankton (green) blooms around drifting nutrient upwellings, the soft glows. Carrion (red) is what's left when something dies, and it slowly rots.</span></li>
+  </ul>
+  <h3>Scale and time</h3>
+  <p>
+    The slide is 1.6 mm across and creatures are 6–24 µm long. A day is 600 ticks, and plankton follows a 12-day cycle
+    of bloom and lean season. Your pool saves itself in this browser and resumes when you come back.
+  </p>
+</dialog>
 
 <script>
 /*SCRIPT*/

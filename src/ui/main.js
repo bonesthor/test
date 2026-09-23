@@ -1,7 +1,7 @@
 import { World, TICKS_PER_DAY } from '../sim/world.js';
 import { theme, watchTheme, speciesColor } from './theme.js';
 import { Camera, drawPool, pickCreature } from './render.js';
-import { Lab } from './lab.js';
+import { Lab, drawKey } from './lab.js';
 import { Soundscape } from './sound.js';
 import { drawPopulation, drawLineage, lineageRows, drawBrain, drawTrend, TRENDS } from './charts.js';
 import {
@@ -251,8 +251,9 @@ function updatePanels() {
       close: () => focusSpecies(state.focusSpecies),
     });
   } else if (state.tab === 'lineage') {
-    const rows = lineageRows(world);
+    const { rows, minPeak } = lineageRows(world);
     $('lineage-count').textContent = `${rows.length} shown of ${world.speciesOrder.length} species`;
+    $('lineage-filter').textContent = `Species that never numbered more than ${minPeak - 1} are left out unless still alive.`;
     state.lineage = drawLineage($('lineage-chart'), world, rows, state.focusSpecies);
   } else if (state.tab === 'specimen') {
     updateSpecimen($('specimen'), world, state.selected, state.following);
@@ -284,6 +285,7 @@ function renderSpecimen() {
       if (child) select(child);
     },
     clear: () => select(null),
+    notify,
   });
 }
 
@@ -313,7 +315,12 @@ function setSpeed(speed) {
 }
 
 function release(design, at) {
-  const sp = state.world.introduce(design.traits, { count: design.count, name: design.name, ...(at ?? {}) });
+  const sp = state.world.introduce(design.traits, {
+    count: design.count,
+    name: design.name,
+    weights: design.weights,
+    ...(at ?? {}),
+  });
   setTool('inspect');
   state.focusSpecies = sp.id;
   state.dirtyPanels = true;
@@ -447,6 +454,15 @@ $('zoom-fit').addEventListener('click', () => {
 
 $('play').addEventListener('click', () => setPaused(!state.paused));
 $('sound').addEventListener('click', toggleSound);
+$('about-open').addEventListener('click', () => {
+  const dialog = $('about');
+  dialog.showModal();
+  drawKey(dialog);
+});
+$('about-close').addEventListener('click', () => $('about').close());
+$('about').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) e.currentTarget.close();
+});
 
 async function toggleSound() {
   const on = !sound.enabled;

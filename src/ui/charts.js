@@ -146,10 +146,19 @@ export function drawPopulation(canvas, world, legendEl) {
 
 const ROW = 15;
 
+const MAX_ROWS = 240;
+
 export function lineageRows(world) {
-  // Hide species that never amounted to more than a couple of individuals,
-  // unless they are alive now; re-attach their children to the nearest shown ancestor.
-  const shown = world.speciesOrder.filter((sp) => sp.peak >= 3 || sp.population > 0);
+  // Hide species that never amounted to more than a few individuals, unless
+  // they are alive now; re-attach their children to the nearest shown
+  // ancestor. On long runs the bar rises until the chart stays readable.
+  let minPeak = 3;
+  let shown;
+  for (;;) {
+    shown = world.speciesOrder.filter((sp) => sp.peak >= minPeak || sp.population > 0);
+    if (shown.length <= MAX_ROWS || minPeak > 10000) break;
+    minPeak = Math.ceil(minPeak * 1.5);
+  }
   const shownSet = new Set(shown.map((s) => s.id));
   const anchor = (sp) => {
     let p = sp.parentId ? world.species.get(sp.parentId) : null;
@@ -172,7 +181,7 @@ export function lineageRows(world) {
     for (const c of children.get(sp.id) ?? []) visit(c, sp);
   };
   for (const r of roots) visit(r, null);
-  return rows;
+  return { rows, minPeak };
 }
 
 export function drawLineage(canvas, world, rows, focusId) {

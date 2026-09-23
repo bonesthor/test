@@ -978,6 +978,109 @@ button {
   cursor: copy;
 }
 
+.code-box {
+  width: 100%;
+  font: 11px/1.4 var(--mono);
+  color: var(--ink);
+  background: var(--raised);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  padding: 8px;
+  resize: vertical;
+  word-break: break-all;
+}
+
+.transplant {
+  display: grid;
+  gap: 8px;
+  padding-top: 14px;
+  border-top: 1px solid var(--rule-soft);
+}
+
+.transplant .section-head {
+  margin: 0;
+}
+
+#lab-code-status[data-state='error'] {
+  color: var(--hunter);
+}
+
+/* about */
+
+.about {
+  width: min(600px, calc(100% - 32px));
+  max-height: calc(100% - 48px);
+  padding: 22px 24px;
+  border: 1px solid var(--rule);
+  border-radius: 16px;
+  background: var(--raised);
+  color: var(--ink);
+  box-shadow: var(--shadow);
+}
+
+.about::backdrop {
+  background: rgba(4, 16, 15, 0.45);
+  backdrop-filter: blur(2px);
+}
+
+.about-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.about h2 {
+  margin: 0;
+  font: 400 28px/1.1 var(--display);
+}
+
+.about h2 i {
+  color: var(--accent);
+}
+
+.about h3 {
+  margin: 18px 0 6px;
+  font: 400 19px/1.2 var(--display);
+}
+
+.about p {
+  margin: 10px 0 0;
+  max-width: 64ch;
+  color: var(--ink-soft);
+}
+
+.about p i,
+.key i {
+  font-family: var(--display);
+  font-size: 1.08em;
+}
+
+.key {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.key li {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+
+.key canvas {
+  width: 72px;
+  height: 40px;
+  border-radius: 8px;
+  background: var(--pool);
+  border: 1px solid var(--rule-soft);
+}
+
 /* log */
 
 .log {

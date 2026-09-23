@@ -2,7 +2,7 @@
 // population into the pool. Brains start from the same hand-wired reflexes
 // as the pool's first creatures; evolution does the rest.
 
-import { TRAITS } from '../sim/genome.js';
+import { TRAITS, codeToGenome } from '../sim/genome.js';
 import { Rng } from '../sim/rng.js';
 import { makeGenus, makeEpithet } from '../sim/names.js';
 import { TICKS_PER_DAY } from '../sim/world.js';
@@ -42,6 +42,7 @@ export class Lab {
     this.onRelease = onRelease;
     this.traits = { ...PRESETS.Hunter };
     this.count = 12;
+    this.weights = null; // an evolved brain, when a genome code is loaded
     this.wiggle = 0;
     this.build();
     this.sync();
@@ -79,12 +80,36 @@ export class Lab {
       this.sync();
     });
 
+    const status = this.root.querySelector('#lab-code-status');
+    const forget = this.root.querySelector('#lab-forget');
+    this.root.querySelector('#lab-load').addEventListener('click', () => {
+      try {
+        const g = codeToGenome(this.root.querySelector('#lab-code').value);
+        this.traits = { ...g.traits };
+        this.weights = g.weights;
+        status.dataset.state = 'ok';
+        status.textContent = 'Genome loaded. Founders will carry its evolved brain.';
+        forget.hidden = false;
+        this.sync();
+      } catch (err) {
+        status.dataset.state = 'error';
+        status.textContent = err.message;
+      }
+    });
+    forget.addEventListener('click', () => {
+      this.weights = null;
+      forget.hidden = true;
+      status.dataset.state = 'ok';
+      status.textContent = 'Founders will start from the simple starter reflexes.';
+      this.sync(false);
+    });
+
     this.root.querySelector('#lab-release').addEventListener('click', () => this.onRelease(this.design(), true));
     this.root.querySelector('#lab-random').addEventListener('click', () => this.onRelease(this.design(), false));
   }
 
   design() {
-    return { traits: { ...this.traits }, count: this.count, name: nameFor(this.traits) };
+    return { traits: { ...this.traits }, count: this.count, name: nameFor(this.traits), weights: this.weights };
   }
 
   sync(updateInputs = true) {
@@ -107,7 +132,8 @@ export class Lab {
     const burn = (0.018 * s * Math.sqrt(s) + 0.00007 * t.sense + 0.0022 * t.fov) * TICKS_PER_DAY;
     const bite = (2 + 14 * t.diet) * s;
     this.root.querySelector('#lab-budget').textContent =
-      `Stores ${Math.round(store)} energy · burns ${burn.toFixed(0)}/day at rest · bite ${bite.toFixed(0)} · breeds at ${Math.round(store * t.fertility)}`;
+      `Stores ${Math.round(store)} energy · burns ${burn.toFixed(0)}/day at rest · bite ${bite.toFixed(0)} · breeds at ${Math.round(store * t.fertility)}` +
+      (this.weights ? ' · evolved brain' : ' · starter reflexes');
     this.root.querySelector('#lab-release').textContent = `Release ${this.count} into the pool`;
   }
 
@@ -177,5 +203,55 @@ export class Lab {
     ctx.fillRect(12, h - 14, 10 * zoom, 2);
     ctx.font = `10px 'IBM Plex Mono', monospace`;
     ctx.fillText('10 µm', 12, h - 20);
+  }
+}
+
+// Small illustrations for the About dialog's key, drawn with the pool's own renderer.
+const KEY = {
+  grazer: { traits: { size: 1.1, diet: 0.05, fov: 2.6 }, hue: 120 },
+  hunter: { traits: { size: 1.5, diet: 0.85, fov: 1.6 }, hue: 8, sinceBite: 0 },
+  hungry: { traits: { size: 1.1, diet: 0.1, fov: 2.6 }, hue: 210, energy: 0.1 },
+  bitten: { traits: { size: 1.1, diet: 0.1, fov: 2.6 }, hue: 280, sinceHurt: 2 },
+};
+
+export function drawKey(root) {
+  for (const canvas of root.querySelectorAll('canvas[data-key]')) {
+    const { ctx, w, h } = sizeCanvas(canvas, 40);
+    const dpr = canvas.width / w;
+    ctx.fillStyle = theme.pool;
+    ctx.fillRect(0, 0, w, h);
+    const spec = KEY[canvas.dataset.key];
+    if (!spec) {
+      // Plankton and carrion.
+      ctx.fillStyle = theme.plankton;
+      for (const [x, y] of [[12, 12], [20, 26], [30, 15], [24, 8]]) {
+        ctx.beginPath();
+        ctx.arc(x, y, 2.4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.fillStyle = theme.carrion;
+      for (const [x, y, r] of [[50, 20, 4], [58, 27, 3], [55, 13, 2.5]]) {
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      continue;
+    }
+    const zoom = 2.4;
+    const c = {
+      radius: 5 * spec.traits.size,
+      energy: spec.energy ?? 1,
+      maxEnergy: 1,
+      angle: 0,
+      x: 0,
+      y: 0,
+      thrust: 0.7,
+      wiggle: 1.2,
+      sinceBite: spec.sinceBite ?? 99,
+      sinceHurt: spec.sinceHurt ?? 99,
+      genome: { traits: spec.traits },
+    };
+    drawCreature(ctx, c, spec.hue, 1 / zoom, { k: dpr * zoom, e: dpr * (w * 0.6), f: dpr * (h / 2) });
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
 }

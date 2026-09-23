@@ -134,8 +134,10 @@ export class World {
   }
 
   // A species designed by hand in the Lab and released as a founding population.
-  introduce(traits, { count = 12, x, y, name } = {}) {
+  // Pass `weights` to transplant an evolved brain instead of the starter reflexes.
+  introduce(traits, { count = 12, x, y, name, weights } = {}) {
     const genome = primordialGenome(this.rng, traits.diet > 0.45);
+    if (weights) genome.weights = Float32Array.from(weights);
     for (const key of TRAIT_KEYS) {
       if (traits[key] === undefined) continue;
       const t = TRAITS[key];
