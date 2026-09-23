@@ -1,0 +1,1077 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Tidepool</title>
+<meta name="description" content="An evolving ecosystem of tiny creatures with neural-network brains." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=Atkinson+Hyperlegible:wght@400;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
+/>
+<style>
+:root {
+  --ground: #e8ece4;
+  --surface: #f3f5f0;
+  --raised: #fbfcf9;
+  --ink: #17292b;
+  --ink-soft: #33484a;
+  --muted: #5a6b69;
+  --rule: #cbd3c9;
+  --rule-soft: #dce2d8;
+  --accent: #0e6a70;
+  --accent-ink: #f3f5f0;
+  --pool: #dfe6da;
+  --pool-deep: #d2dccd;
+  --pool-grid: rgba(23, 41, 43, 0.07);
+  --pool-grid-major: rgba(23, 41, 43, 0.13);
+  --plankton: #5b8a26;
+  --carrion: #a8483a;
+  --upwelling: rgba(91, 138, 38, 0.13);
+  --grazer: #4f7d2a;
+  --omnivore: #9a6a12;
+  --hunter: #a8483a;
+  --focus: #0e6a70;
+  --shadow: 0 1px 0 rgba(23, 41, 43, 0.04), 0 8px 24px -12px rgba(23, 41, 43, 0.25);
+  --species-l: 36%;
+  --species-s: 62%;
+  --display: 'IM Fell English', 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
+  --body: 'Atkinson Hyperlegible', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+    --ground: #071316;
+    --surface: #0b1c20;
+    --raised: #10252a;
+    --ink: #d6e4df;
+    --ink-soft: #b3c9c3;
+    --muted: #7f9c96;
+    --rule: #1c363b;
+    --rule-soft: #142a2f;
+    --accent: #62d4c6;
+    --accent-ink: #062226;
+    --pool: #04100f;
+    --pool-deep: #020a0a;
+    --pool-grid: rgba(98, 212, 198, 0.045);
+    --pool-grid-major: rgba(98, 212, 198, 0.09);
+    --plankton: #9fdc5a;
+    --carrion: #ff7d66;
+    --upwelling: rgba(159, 220, 90, 0.07);
+    --grazer: #9fdc5a;
+    --omnivore: #f0bd57;
+    --hunter: #ff7d66;
+    --focus: #62d4c6;
+    --shadow: 0 1px 0 rgba(0, 0, 0, 0.3), 0 10px 30px -12px rgba(0, 0, 0, 0.7);
+    --species-l: 66%;
+    --species-s: 82%;
+  }
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --ground: #071316;
+  --surface: #0b1c20;
+  --raised: #10252a;
+  --ink: #d6e4df;
+  --ink-soft: #b3c9c3;
+  --muted: #7f9c96;
+  --rule: #1c363b;
+  --rule-soft: #142a2f;
+  --accent: #62d4c6;
+  --accent-ink: #062226;
+  --pool: #04100f;
+  --pool-deep: #020a0a;
+  --pool-grid: rgba(98, 212, 198, 0.045);
+  --pool-grid-major: rgba(98, 212, 198, 0.09);
+  --plankton: #9fdc5a;
+  --carrion: #ff7d66;
+  --upwelling: rgba(159, 220, 90, 0.07);
+  --grazer: #9fdc5a;
+  --omnivore: #f0bd57;
+  --hunter: #ff7d66;
+  --focus: #62d4c6;
+  --shadow: 0 1px 0 rgba(0, 0, 0, 0.3), 0 10px 30px -12px rgba(0, 0, 0, 0.7);
+  --species-l: 66%;
+  --species-s: 82%;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font: 400 14px/1.45 var(--body);
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.app {
+  height: 100%;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 12px;
+  padding-inline: 16px;
+  padding-block: 12px 16px;
+}
+
+/* ------------------------------------------------------------ header */
+
+.masthead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 20px;
+}
+
+.brand {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-right: auto;
+}
+
+.brand h1 {
+  margin: 0;
+  font: 400 30px/1 var(--display);
+  letter-spacing: 0.01em;
+}
+
+.brand h1 i {
+  color: var(--accent);
+}
+
+.brand p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.clock {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.clock b {
+  color: var(--ink);
+  font-weight: 500;
+  font-size: 15px;
+}
+
+.season-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--rule);
+  font-family: var(--body);
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+
+.season-chip .gauge {
+  width: 34px;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--rule-soft);
+  overflow: hidden;
+}
+
+.season-chip .gauge span {
+  display: block;
+  height: 100%;
+  background: var(--plankton);
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.seg {
+  display: inline-flex;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 2px;
+}
+
+.seg button {
+  border: 0;
+  background: none;
+  padding: 5px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+.seg button:hover {
+  color: var(--ink);
+  background: var(--rule-soft);
+}
+
+.seg button[aria-pressed='true'] {
+  background: var(--ink);
+  color: var(--surface);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--rule);
+  background: var(--surface);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.btn:hover {
+  border-color: var(--muted);
+}
+
+.btn.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+  min-width: 84px;
+  justify-content: center;
+}
+
+.btn svg {
+  width: 14px;
+  height: 14px;
+  fill: currentColor;
+}
+
+/* ------------------------------------------------------------ layout */
+
+.stage {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 390px);
+  gap: 16px;
+  min-height: 0;
+}
+
+.pool-wrap {
+  position: relative;
+  min-height: 0;
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--pool);
+  box-shadow: var(--shadow), inset 0 0 0 1px var(--rule);
+}
+
+#pool {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  cursor: crosshair;
+}
+
+#pool[data-tool='feed'] {
+  cursor: cell;
+}
+
+#pool.dragging {
+  cursor: grabbing;
+}
+
+.overlay {
+  position: absolute;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  pointer-events: none;
+}
+
+.overlay > * {
+  pointer-events: auto;
+}
+
+.overlay.top-left {
+  top: 12px;
+  left: 12px;
+  flex-wrap: wrap;
+  max-width: calc(100% - 24px);
+}
+
+.overlay.bottom-right {
+  bottom: 12px;
+  right: 12px;
+}
+
+.overlay.bottom-left {
+  bottom: 14px;
+  left: 14px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  border: 1px solid var(--rule);
+  font-size: 12px;
+  color: var(--ink-soft);
+  backdrop-filter: blur(6px);
+}
+
+.chip i {
+  font-family: var(--display);
+  font-size: 14px;
+  color: var(--ink);
+}
+
+.chip button {
+  border: 0;
+  background: none;
+  padding: 0 2px;
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1;
+}
+
+.icon-btn {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  border: 1px solid var(--rule);
+  background: color-mix(in srgb, var(--surface) 90%, transparent);
+  cursor: pointer;
+  font-size: 16px;
+  color: var(--ink-soft);
+}
+
+.icon-btn[aria-pressed='true'] {
+  background: var(--ink);
+  color: var(--surface);
+}
+
+.scalebar {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+  display: grid;
+  gap: 3px;
+}
+
+.scalebar span {
+  display: block;
+  height: 4px;
+  border: 1.5px solid var(--muted);
+  border-top: 0;
+}
+
+/* ------------------------------------------------------------ panel */
+
+.panel {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 0;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.tabs {
+  display: flex;
+  border-bottom: 1px solid var(--rule);
+  padding-inline: 6px;
+}
+
+.tabs button {
+  flex: 1;
+  border: 0;
+  background: none;
+  padding: 11px 4px 9px;
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 13px;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+
+.tabs button:hover {
+  color: var(--ink);
+}
+
+.tabs button[aria-selected='true'] {
+  color: var(--ink);
+  border-bottom-color: var(--accent);
+  font-weight: 700;
+}
+
+.tabpanel {
+  overflow-y: auto;
+  padding: 16px;
+  display: grid;
+  align-content: start;
+  gap: 18px;
+  min-height: 0;
+}
+
+.section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0 0 8px;
+}
+
+.section-head h2 {
+  margin: 0;
+  font: 400 19px/1.2 var(--display);
+  text-wrap: balance;
+}
+
+.section-head small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.eyebrow {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--rule-soft);
+  border: 1px solid var(--rule-soft);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.stats div {
+  background: var(--raised);
+  padding: 8px 10px;
+  display: grid;
+  gap: 2px;
+}
+
+.stats dt {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.stats dd {
+  margin: 0;
+  font: 500 17px/1.1 var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.chart {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 6px;
+}
+
+.legend span::before {
+  content: '';
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  margin-right: 5px;
+  vertical-align: -1px;
+  background: var(--c);
+}
+
+/* species list */
+
+.species-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+}
+
+.species-list li + li {
+  border-top: 1px solid var(--rule-soft);
+}
+
+.species-row {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 12px minmax(0, 1fr) auto 44px;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 4px;
+  border: 0;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 6px;
+}
+
+.species-row:hover {
+  background: var(--rule-soft);
+}
+
+.species-row[aria-pressed='true'] {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+.swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--c);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--c) 25%, transparent);
+}
+
+.sp-name {
+  font: italic 400 15px/1.2 var(--display);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sp-meta {
+  font-size: 11px;
+  color: var(--muted);
+  font-style: normal;
+  font-family: var(--body);
+}
+
+.sp-count {
+  font: 500 13px var(--mono);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.diet-tag {
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 1px 6px;
+  border-radius: 4px;
+  border: 1px solid currentColor;
+  white-space: nowrap;
+}
+
+.diet-tag.grazer {
+  color: var(--grazer);
+}
+
+.diet-tag.omnivore {
+  color: var(--omnivore);
+}
+
+.diet-tag.hunter {
+  color: var(--hunter);
+}
+
+/* lineage */
+
+.lineage-scroll {
+  position: relative;
+}
+
+.tooltip {
+  position: absolute;
+  pointer-events: none;
+  background: var(--raised);
+  border: 1px solid var(--rule);
+  box-shadow: var(--shadow);
+  border-radius: 8px;
+  padding: 6px 9px;
+  font-size: 12px;
+  color: var(--ink-soft);
+  max-width: 240px;
+  z-index: 2;
+}
+
+.tooltip i {
+  font: italic 400 15px var(--display);
+  color: var(--ink);
+  display: block;
+}
+
+.note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12.5px;
+  max-width: 62ch;
+}
+
+/* specimen */
+
+#specimen {
+  display: grid;
+  gap: 18px;
+}
+
+.specimen-head h2 {
+  margin: 0;
+  font: italic 400 24px/1.15 var(--display);
+  text-wrap: balance;
+}
+
+.specimen-head p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--rule);
+}
+
+.status::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--grazer);
+}
+
+.status.dead::before {
+  background: var(--hunter);
+}
+
+.meters {
+  display: grid;
+  gap: 6px;
+}
+
+.meter {
+  display: grid;
+  grid-template-columns: 86px minmax(0, 1fr) 64px;
+  gap: 10px;
+  align-items: center;
+  font-size: 12.5px;
+}
+
+.meter .track {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--rule-soft);
+  position: relative;
+  overflow: hidden;
+}
+
+.meter .fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--ink-soft);
+  border-radius: 3px;
+}
+
+.meter .pin {
+  position: absolute;
+  top: -2px;
+  width: 3px;
+  height: 10px;
+  border-radius: 2px;
+  background: var(--ink);
+  transform: translateX(-50%);
+}
+
+.meter .track.diet {
+  background: linear-gradient(90deg, var(--grazer), var(--omnivore), var(--hunter));
+  opacity: 0.85;
+}
+
+.meter output {
+  font: 12px var(--mono);
+  text-align: right;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+.tally {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  text-align: center;
+}
+
+.tally div {
+  display: grid;
+  gap: 1px;
+}
+
+.tally b {
+  font: 500 16px var(--mono);
+}
+
+.tally span {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.empty {
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+  padding-block: 8px;
+}
+
+.empty p {
+  margin: 0;
+  color: var(--muted);
+  max-width: 44ch;
+}
+
+/* log */
+
+.log {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+}
+
+.log li {
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr);
+  gap: 10px;
+  padding: 8px 2px;
+  border-top: 1px solid var(--rule-soft);
+  font-size: 13px;
+}
+
+.log li:first-child {
+  border-top: 0;
+}
+
+.log time {
+  font: 11.5px var(--mono);
+  color: var(--muted);
+  padding-top: 2px;
+  font-variant-numeric: tabular-nums;
+}
+
+.log .kind {
+  display: inline-block;
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-right: 6px;
+}
+
+.log .kind.speciation {
+  color: var(--accent);
+}
+
+.log .kind.extinction {
+  color: var(--hunter);
+}
+
+.log .kind.record {
+  color: var(--omnivore);
+}
+
+.log em {
+  font: italic 400 14.5px var(--display);
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: var(--rule);
+  text-underline-offset: 3px;
+}
+
+.log em:hover {
+  text-decoration-color: currentColor;
+}
+
+.kbd-help {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+kbd {
+  font: 11px var(--mono);
+  border: 1px solid var(--rule);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 0 4px;
+  background: var(--raised);
+}
+
+/* ------------------------------------------------------------ small screens */
+
+@media (max-width: 900px) {
+  html,
+  body {
+    height: auto;
+  }
+
+  .app {
+    height: auto;
+    grid-template-rows: auto auto;
+  }
+
+  .stage {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .pool-wrap {
+    aspect-ratio: 16 / 11;
+    max-width: 100%;
+  }
+
+  .panel {
+    max-height: none;
+  }
+
+  .tabpanel {
+    overflow: visible;
+  }
+}
+
+@media (max-width: 520px) {
+  .brand p {
+    display: none;
+  }
+
+  .stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .clock {
+    width: 100%;
+    order: 3;
+  }
+
+  .seg button {
+    padding: 5px 8px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    scroll-behavior: auto !important;
+  }
+}
+
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="masthead">
+    <div class="brand">
+      <h1>Tide<i>pool</i></h1>
+      <p>An ecosystem that evolves while you watch</p>
+    </div>
+    <div class="clock" aria-live="off">
+      <span>Day <b id="clock-day">0.0</b></span>
+      <span class="season-chip" id="season-chip" title="Plankton supply">
+        <span id="season-label">Bloom</span>
+        <span class="gauge"><span id="season-gauge"></span></span>
+      </span>
+      <span>Pool <b id="clock-seed">tidepool</b></span>
+    </div>
+    <div class="controls">
+      <button class="btn primary" id="play" type="button" aria-label="Pause">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path id="play-icon" d="M4 3h3v10H4zM9 3h3v10H9z" /></svg>
+        <span id="play-label">Pause</span>
+      </button>
+      <div class="seg" role="group" aria-label="Speed" id="speed">
+        <button type="button" data-speed="1" aria-pressed="true">1×</button>
+        <button type="button" data-speed="4" aria-pressed="false">4×</button>
+        <button type="button" data-speed="16" aria-pressed="false">16×</button>
+        <button type="button" data-speed="64" aria-pressed="false">Max</button>
+      </div>
+      <div class="seg" role="group" aria-label="Tool" id="tool">
+        <button type="button" data-tool="inspect" aria-pressed="true">Inspect</button>
+        <button type="button" data-tool="feed" aria-pressed="false">Feed</button>
+      </div>
+      <button class="btn" id="new-pool" type="button">New pool</button>
+    </div>
+  </header>
+
+  <main class="stage">
+    <section class="pool-wrap" aria-label="The pool">
+      <canvas id="pool" data-tool="inspect"></canvas>
+      <div class="overlay top-left" id="pool-chips"></div>
+      <div class="overlay bottom-left">
+        <div class="scalebar" aria-hidden="true"><span id="scale-line"></span><em id="scale-label">100 µm</em></div>
+      </div>
+      <div class="overlay bottom-right">
+        <button class="icon-btn" id="zoom-in" type="button" aria-label="Zoom in">+</button>
+        <button class="icon-btn" id="zoom-out" type="button" aria-label="Zoom out">−</button>
+        <button class="icon-btn" id="zoom-fit" type="button" aria-label="Fit the whole pool">⤢</button>
+      </div>
+    </section>
+
+    <aside class="panel">
+      <nav class="tabs" role="tablist" aria-label="Panels">
+        <button role="tab" type="button" id="tab-census" aria-controls="panel-census" aria-selected="true">Census</button>
+        <button role="tab" type="button" id="tab-lineage" aria-controls="panel-lineage" aria-selected="false">Lineage</button>
+        <button role="tab" type="button" id="tab-specimen" aria-controls="panel-specimen" aria-selected="false">Specimen</button>
+        <button role="tab" type="button" id="tab-log" aria-controls="panel-log" aria-selected="false">Field log</button>
+      </nav>
+
+      <div class="tabpanel" role="tabpanel" id="panel-census" aria-labelledby="tab-census">
+        <dl class="stats">
+          <div><dt>Creatures</dt><dd id="st-pop">0</dd></div>
+          <div><dt>Species</dt><dd id="st-species">0</dd></div>
+          <div><dt>Plankton</dt><dd id="st-plankton">0</dd></div>
+          <div><dt>Generation</dt><dd id="st-gen">0</dd></div>
+        </dl>
+        <section>
+          <div class="section-head"><h2>Population</h2><small id="pop-span">last 0 days</small></div>
+          <canvas class="chart" id="pop-chart" height="150"></canvas>
+          <div class="legend" id="pop-legend"></div>
+        </section>
+        <section>
+          <div class="section-head"><h2>Living species</h2><small>tap one to highlight it</small></div>
+          <ul class="species-list" id="species-list"></ul>
+        </section>
+      </div>
+
+      <div class="tabpanel" role="tabpanel" id="panel-lineage" aria-labelledby="tab-lineage" hidden>
+        <section>
+          <div class="section-head"><h2>Tree of life</h2><small id="lineage-count">0 species</small></div>
+          <p class="note">
+            A spindle diagram, as palaeontologists draw the fossil record. Time runs left to right; each spindle is one
+            species and its width is its population. Thin connectors show which species each one branched from.
+          </p>
+        </section>
+        <div class="lineage-scroll" id="lineage-wrap">
+          <canvas class="chart" id="lineage-chart"></canvas>
+          <div class="tooltip" id="lineage-tip" hidden></div>
+        </div>
+      </div>
+
+      <div class="tabpanel" role="tabpanel" id="panel-specimen" aria-labelledby="tab-specimen" hidden>
+        <div id="specimen"></div>
+      </div>
+
+      <div class="tabpanel" role="tabpanel" id="panel-log" aria-labelledby="tab-log" hidden>
+        <section>
+          <div class="section-head"><h2>Field log</h2><small id="log-count"></small></div>
+          <ol class="log" id="log"></ol>
+        </section>
+        <p class="kbd-help">
+          <kbd>Space</kbd> pause · <kbd>1</kbd>–<kbd>4</kbd> speed · <kbd>F</kbd> feed · <kbd>I</kbd> inspect ·
+          <kbd>Esc</kbd> clear selection
+        </p>
+      </div>
+    </aside>
+  </main>
+</div>
+
+<script>
+(()=>{function he(e){let t=String(e),s=1779033703^t.length;for(let o=0;o<t.length;o++)s=Math.imul(s^t.charCodeAt(o),3432918353),s=s<<13|s>>>19;let n=[];for(let o=0;o<4;o++)s=Math.imul(s^s>>>16,2246822507),s=Math.imul(s^s>>>13,3266489909),n.push((s^=s>>>16)>>>0);return n}var rt=class{constructor(t=1){[this.a,this.b,this.c,this.d]=he(t),this.spare=null;for(let s=0;s<12;s++)this.next()}next(){let{a:t,b:s,c:n,d:o}=this,i=(t+s|0)+o|0;return o=o+1|0,t=s^s>>>9,s=n+(n<<3)|0,n=n<<21|n>>>11,n=n+i|0,this.a=t,this.b=s,this.c=n,this.d=o,(i>>>0)/4294967296}range(t,s){return t+(s-t)*this.next()}int(t){return Math.floor(this.next()*t)}chance(t){return this.next()<t}pick(t){return t[this.int(t.length)]}gauss(){if(this.spare!==null){let o=this.spare;return this.spare=null,o}let t=0;for(;t===0;)t=this.next();let s=this.next(),n=Math.sqrt(-2*Math.log(t));return this.spare=n*Math.sin(2*Math.PI*s),n*Math.cos(2*Math.PI*s)}getState(){return[this.a,this.b,this.c,this.d,this.spare]}setState(t){[this.a,this.b,this.c,this.d,this.spare]=t}};var ot=class{constructor(t,s,n){this.cell=n,this.cols=Math.ceil(t/n),this.rows=Math.ceil(s/n),this.buckets=Array.from({length:this.cols*this.rows},()=>[])}clear(){for(let t of this.buckets)t.length=0}insert(t){let s=Math.min(this.cols-1,Math.max(0,t.x/this.cell|0)),n=Math.min(this.rows-1,Math.max(0,t.y/this.cell|0));this.buckets[n*this.cols+s].push(t)}forEachNear(t,s,n,o){let{cell:i,cols:a,rows:r,buckets:l}=this,h=Math.max(0,(t-n)/i|0),f=Math.min(a-1,(t+n)/i|0),m=Math.max(0,(s-n)/i|0),d=Math.min(r-1,(s+n)/i|0);for(let M=m;M<=d;M++)for(let T=h;T<=f;T++){let I=l[M*a+T];for(let v=0;v<I.length;v++)o(I[v])}}};var gt=[...Array.from({length:5},(e,t)=>`plankton ${t+1}`),...Array.from({length:5},(e,t)=>`carrion ${t+1}`),...Array.from({length:5},(e,t)=>`creature ${t+1}`),"rival size","kinship","energy","health","speed","wall ahead","pulse","memory A","memory B","bias"],mt=["thrust","turn","bite","memory A","memory B"],P={plant:0,meat:5,creature:10,rivalSize:15,kinship:16,energy:17,health:18,speed:19,wall:20,pulse:21,memA:22,memB:23,bias:24},D={thrust:0,turn:1,bite:2,memA:3,memB:4},G=gt.length,B=12,J=mt.length,yt=B*G,ce=J*(B+1),X=yt+ce;function F(e,t){return e*G+t}function W(e,t){return yt+e*(B+1)+t}function $t(){return{input:new Float32Array(G),hidden:new Float32Array(B),output:new Float32Array(J)}}function At(e,t){let{input:s,hidden:n,output:o}=t;for(let i=0;i<B;i++){let a=0,r=i*G;for(let l=0;l<G;l++)a+=e[r+l]*s[l];n[i]=Math.tanh(a)}for(let i=0;i<J;i++){let a=yt+i*(B+1),r=e[a+B];for(let l=0;l<B;l++)r+=e[a+l]*n[l];o[i]=Math.tanh(r)}return o}function It(e,t=!1){let s=new Float32Array(X);for(let o=0;o<X;o++)s[o]=e.gauss()*.15;let n=4/2;for(let o=0;o<5;o++)s[F(0,P.plant+o)]=(o-n)/n*2.2,s[F(1,P.meat+o)]=(o-n)/n*1.2;if(s[F(2,P.bias)]=1.2,s[F(2,P.plant+n)]=.8,s[F(3,P.wall)]=3,s[F(4,P.creature+n)]=2,s[F(4,P.bias)]=-1.2,t){for(let o=0;o<5;o++)s[F(5,P.creature+o)]=(o-n)/n*2.4;s[F(6,P.creature+n)]=1.5,s[F(4,P.bias)]=-.6,s[F(4,P.kinship)]=-2.5,s[F(6,P.kinship)]=-1.5,s[W(D.turn,5)]=1.8,s[W(D.thrust,6)]=.9}return s[W(D.turn,0)]=1.6,s[W(D.turn,1)]=.8,s[W(D.turn,3)]=1.8,s[W(D.thrust,2)]=1.1,s[W(D.thrust,3)]=-.8,s[W(D.bite,4)]=1.2,s[W(D.bite,B)]=-.6,s}var st={size:{min:.6,max:2.4,label:"Body size"},diet:{min:0,max:1,label:"Diet"},speed:{min:.3,max:1.6,label:"Muscle"},sense:{min:40,max:220,label:"Sight range"},fov:{min:.6,max:5.2,label:"Field of view"},hue:{min:0,max:360,label:"Pigment",wrap:!0},fertility:{min:.45,max:.95,label:"Brood threshold"},invest:{min:.15,max:.6,label:"Brood investment"},mutation:{min:.01,max:.25,label:"Mutation rate"}},Lt=Object.keys(st);function de(e,t){let s=st[e];return s.wrap?(t%s.max+s.max)%s.max:Math.min(s.max,Math.max(s.min,t))}function Rt(e,t=!1){return{traits:{size:t?e.range(1.2,1.6):e.range(.8,1.3),diet:t?e.range(.45,.6):e.range(.02,.15),speed:e.range(.6,1),sense:e.range(80,130),fov:e.range(1.8,2.8),hue:e.range(0,360),fertility:e.range(.6,.8),invest:e.range(.3,.45),mutation:e.range(.04,.08)},weights:It(e,t)}}function xt(e,t){let s=e.traits.mutation,n={};for(let a of Lt){let r=st[a],l=r.max-r.min,h=a==="mutation"?.1:a==="hue"||a==="diet"?.6:.35;n[a]=de(a,e.traits[a]+t.gauss()*l*s*h)}let o=new Float32Array(X),i=e.weights;for(let a=0;a<X;a++){let r=i[a];t.next()<.2&&(r+=t.gauss()*s*2.5),t.next()<s*.02&&(r=t.gauss()),o[a]=Math.max(-5,Math.min(5,r))}return{traits:n,weights:o}}function wt(e,t){let s=0,n=0;for(let r of Lt){if(r==="hue"||r==="mutation")continue;let l=st[r];s+=Math.abs(e.traits[r]-t.traits[r])/(l.max-l.min),n++}let o=0,i=e.weights,a=t.weights;for(let r=0;r<X;r++)o+=Math.abs(i[r]-a[r]);return s/n*2+o/X*.6}function kt(e){return{traits:{...e.traits},weights:new Float32Array(e.weights)}}var pe=["Cyclo","Plankto","Vora","Cili","Nocti","Thalasso","Micro","Rhizo","Chaeto","Spiro","Lepto","Acantho","Hydro","Medusa","Ptero","Dino","Echino","Coelo","Physa","Gloeo","Luci","Aplo","Nemato","Tricho","Proto","Sarco","Myxo","Opalo","Stylo","Zoo","Halo","Bentho","Glauco","Litho","Pelago","Cteno","Salpa","Tinto","Volvo","Kera"],ue=["ella","opsis","ium","ula","monas","phora","nema","coccus","zoon","ina","aster","ops","ax","ites","caris","morpha","phyllum","cystis","dinium","spira","mena","lynx","thrix","gyra"];function fe(e,t){let s="aeiou";return s.includes(e.at(-1))&&s.includes(t[0])&&(e=e.slice(0,-1)),e+t}function zt(e){return fe(e.pick(pe),e.pick(ue))}function ge(e){return e<18||e>=340?["rubra","coccinea"]:e<45?["aurantia","fulva"]:e<70?["flava","aurea"]:e<150?["viridis","prasina"]:e<190?["thalassina","glauca"]:e<250?["azurea","caerulea"]:e<290?["violacea","ianthina"]:["purpurea","rosea"]}function me(e){let t=[];return e.diet>.7?t.push("vorax","rapax","ferox","sanguinea"):e.diet>.4&&t.push("omnivora","ambigua","versatilis"),e.size>1.8?t.push("magna","gigantea","maxima"):e.size<.85&&t.push("minuta","pusilla","nana"),e.speed>1.25?t.push("velox","celeris","fugax"):e.speed<.5&&t.push("lenta","tarda"),e.sense>170&&t.push("oculata","vigilans","argus"),e.fov>4?t.push("circumspecta","panoptica"):e.fov<1.2&&t.push("angusta","myopica"),e.invest<.22&&t.push("prolifica","fecunda"),t}var Ot=["vulgaris","gracilis","elegans","simplex","errans","lucida","nocturna","communis"];function Dt(e,t,s){let o=[me(e),ge(e.hue),Ot];for(let r of o){let l=r.filter(h=>!s(h));if(l.length)return t.pick(l)}let i=2,a=t.pick(Ot);for(;s(`${a} ${Ht(i)}`);)i++;return`${a} ${Ht(i)}`}function Ht(e){let t=[[10,"x"],[9,"ix"],[5,"v"],[4,"iv"],[1,"i"]],s="";for(let[n,o]of t)for(;e>=n;)s+=o,e-=n;return s}var R=600,ye=1e3,Ft=400,K=Math.PI*2,lt={width:1600,height:1e3,maxPlankton:1100,foodRate:1.1,plantEnergy:16,startPopulation:70,founders:3,minPopulation:10,maxPopulation:700,speciesThreshold:.25,seasonDays:12,upwellings:3},Bt={starvation:"starved",predation:"was eaten",age:"died of old age"};function bt(e){for(;e>Math.PI;)e-=K;for(;e<-Math.PI;)e+=K;return e}var ht=class{constructor(t={}){this.opts={...lt,...t};let s=this.opts.width*this.opts.height/(lt.width*lt.height);for(let n of["maxPlankton","foodRate","startPopulation","maxPopulation"])t[n]===void 0&&(this.opts[n]=lt[n]*s);this.opts.startPopulation=Math.round(this.opts.startPopulation),this.seed=t.seed??"tidepool",this.rng=new rt(this.seed),this.width=this.opts.width,this.height=this.opts.height,this.tick=0,this.nextId=1,this.nextSpeciesId=1,this.creatures=[],this.byId=new Map,this.food=[],this.plankton=0,this.species=new Map,this.speciesOrder=[],this.events=[],this.maxGeneration=0,this.totalBorn=0,this.totalKills=0,this.firstKill=!1,this.foodDebt=0,this.sampleEvery=60,this.samples=[],this.lastSeasonPhase=null,this.lastHunterTick=0,this.creatureGrid=new ot(this.width,this.height,80),this.foodGrid=new ot(this.width,this.height,50),this.upwellings=[];for(let n=0;n<this.opts.upwellings;n++)this.upwellings.push({x:this.rng.range(.15,.85)*this.width,y:this.rng.range(.15,.85)*this.height,r:this.rng.range(110,190),vx:0,vy:0,phase:this.rng.range(0,K),intensity:1});for(let n=0;n<this.opts.maxPlankton*.6;n++)this.spawnPlankton();this.seedLife(this.opts.startPopulation,this.opts.founders,"The pool fills. Founding lineages drift in."),this.record()}get day(){return this.tick/R}get season(){let t=this.tick/(R*this.opts.seasonDays);return .5+.5*Math.sin(t*K)}seedLife(t,s,n,{hunters:o=!1}={}){let i=[];for(let a=0;a<s;a++){let r=o||s>1&&a===s-1,l=Rt(this.rng,r),h=this.createSpecies(l,null);i.push(h.id);for(let f=0;f<Math.ceil(t/s);f++){let m=f===0?kt(l):xt(l,this.rng),d=this.spawnCreature(m,h.id,{x:this.rng.range(40,this.width-40),y:this.rng.range(40,this.height-40),generation:0});d.energy=d.maxEnergy*.6,d.age=this.rng.int(d.maturity)}}this.log("seed",n,i)}spawnCreature(t,s,{x:n,y:o,angle:i,generation:a,parentId:r=null}){let h=t.traits.size,f={id:this.nextId++,genome:t,speciesId:s,parentId:r,generation:a,bornTick:this.tick,x:n,y:o,angle:i??this.rng.range(0,K),vx:0,vy:0,speed:0,thrust:0,turn:0,bite:0,radiusFull:5*h,radius:5*h*.55,maxEnergy:120*h*h,maxHealth:30*h*h,energy:0,health:30*h*h,age:0,maturity:Math.round(170+90*h),lifespan:Math.round(R*(3+2*h)*this.rng.range(.85,1.15)),brain:$t(),biteCooldown:0,sinceBite:999,sinceHurt:999,plankton:0,carrion:0,kills:0,children:0,lastChildId:null,alive:!0,cause:null,killerId:null,diedTick:null,wiggle:this.rng.range(0,K)};this.creatures.push(f),this.byId.set(f.id,f);let m=this.species.get(s);return m.population++,m.totalBorn++,m.population>m.peak&&(m.peak=m.population),this.totalBorn++,a>this.maxGeneration&&(this.maxGeneration=a),f}createSpecies(t,s){let n=s?this.species.get(s):null,o=h=>this.speciesOrder.some(f=>f.genus===i&&f.epithet===h),i,a;!n||n.genusDepth>=3||this.rng.chance(.15)?(i=zt(this.rng),a=0):(i=n.genus,a=n.genusDepth+1);let r=Dt(t.traits,this.rng,o),l={id:this.nextSpeciesId++,genus:i,epithet:r,name:`${i} ${r}`,genusDepth:a,parentId:s,founder:kt(t),hue:t.traits.hue,bornTick:this.tick,extinctTick:null,population:0,peak:0,totalBorn:0,kills:0,historyStart:this.samples.length,history:[],closed:!1,depth:n?n.depth+1:0};return this.species.set(l.id,l),this.speciesOrder.push(l),l}classify(t,s){let n=this.opts.speciesThreshold,o=this.species.get(s);if(wt(t,o.founder)<n)return s;let a=null,r=n;for(let f of this.speciesOrder){if(f.population<=0||f.id===s)continue;let m=wt(t,f.founder);m<r&&(r=m,a=f)}if(a)return a.id;let l=this.createSpecies(t,s),h=xe(o.founder.traits,t.traits);return this.log("speciation",`${l.name} branches from ${o.name}${h}.`,[l.id,o.id]),t.traits.diet>.6&&!this.firstCarnivore&&(this.firstCarnivore=!0,this.log("record",`${l.name} is the pool's first true predator.`,[l.id])),l.id}livingSpecies(){return this.speciesOrder.filter(t=>t.population>0)}spawnPlankton(t,s){if(t===void 0){let o=this.rng;if(o.chance(.78)){let i=0;for(let l of this.upwellings)i+=l.intensity;let a=o.next()*i,r=this.upwellings[0];for(let l of this.upwellings)if(a-=l.intensity,a<=0){r=l;break}t=r.x+o.gauss()*r.r*.6,s=r.y+o.gauss()*r.r*.6}else t=o.range(0,this.width),s=o.range(0,this.height);if(t<4||s<4||t>this.width-4||s>this.height-4)return null}let n={x:t,y:s,energy:this.opts.plantEnergy,kind:0,alive:!0,age:0};return this.food.push(n),this.plankton++,n}dropCarrion(t,s,n,o){for(let i=0;i<o;i++){let a=this.rng.range(0,K),r=this.rng.range(0,6);this.food.push({x:Math.min(this.width-2,Math.max(2,t+Math.cos(a)*r)),y:Math.min(this.height-2,Math.max(2,s+Math.sin(a)*r)),energy:n/o,kind:1,alive:!0,age:0})}}sprinkle(t,s,n=24){for(let o=0;o<n;o++){let i=this.rng.range(0,K),a=Math.abs(this.rng.gauss())*26,r=t+Math.cos(i)*a,l=s+Math.sin(i)*a;r>2&&l>2&&r<this.width-2&&l<this.height-2&&this.spawnPlankton(r,l)}}step(){this.tick++,this.updateEnvironment(),this.creatureGrid.clear();for(let a of this.creatures)this.creatureGrid.insert(a);this.foodGrid.clear();for(let a of this.food)a.alive&&this.foodGrid.insert(a);let t=[],s=this.creatures.length;for(let a=0;a<s;a++){let r=this.creatures[a];r.alive&&(this.sense(r),At(r.genome.weights,r.brain),this.act(r),r.alive&&this.metabolise(r,t))}let n=0;for(let a of this.creatures)a.alive?this.creatures[n++]=a:this.byId.delete(a.id);this.creatures.length=n;let o=0,i=0;for(let a of this.food)if(a.alive){if(a.age++,a.kind===1){if(a.energy*=.9982,a.energy<2)continue}else i++;this.food[o++]=a}this.food.length=o,this.plankton=i,this.creatures.length<this.opts.minPopulation&&this.seedLife(this.opts.minPopulation*2,1,"Numbers are dangerously low. A new founding lineage drifts in on the tide."),this.tick%(R*2)===0&&(this.creatures.some(r=>r.genome.traits.diet>.4)?this.lastHunterTick=this.tick:this.tick-this.lastHunterTick>R*14&&this.creatures.length>60&&(this.lastHunterTick=this.tick,this.seedLife(8,1,"Hunters wash in on a spring tide.",{hunters:!0}))),this.tick%this.sampleEvery===0&&this.record()}updateEnvironment(){let t=this.rng,s=this.tick/(R*this.opts.seasonDays*.7);for(let i of this.upwellings){i.vx=(i.vx+t.gauss()*.004)*.995,i.vy=(i.vy+t.gauss()*.004)*.995,i.x+=i.vx,i.y+=i.vy;let a=i.r*.6;(i.x<a||i.x>this.width-a)&&(i.vx=-i.vx,i.x=Math.min(this.width-a,Math.max(a,i.x))),(i.y<a||i.y>this.height-a)&&(i.vy=-i.vy,i.y=Math.min(this.height-a,Math.max(a,i.y))),i.intensity=.25+.75*(.5+.5*Math.sin(s*K+i.phase))}let n=this.season,o=n>.5?"bloom":"lean";for(this.lastSeasonPhase&&o!==this.lastSeasonPhase&&this.log("season",o==="bloom"?"The water warms. A plankton bloom begins.":"The water cools. The lean season begins."),this.lastSeasonPhase=o,this.foodDebt+=this.opts.foodRate*(.2+.8*n);this.foodDebt>=1;)this.foodDebt-=1,this.plankton<this.opts.maxPlankton&&this.spawnPlankton()}sense(t){let s=t.brain.input;s.fill(0);let n=t.genome.traits,o=n.sense,i=o*o,a=n.fov/2,r=n.fov,l=t.angle,h=this.foodGrid,f=Math.max(0,(t.x-o)/h.cell|0),m=Math.min(h.cols-1,(t.x+o)/h.cell|0),d=Math.max(0,(t.y-o)/h.cell|0),M=Math.min(h.rows-1,(t.y+o)/h.cell|0);for(let A=d;A<=M;A++)for(let C=f;C<=m;C++){let N=h.buckets[A*h.cols+C];for(let u=0;u<N.length;u++){let g=N[u],S=g.x-t.x,Z=g.y-t.y,_=S*S+Z*Z;if(_>i)continue;let j=bt(Math.atan2(Z,S)-l);if(j<-a||j>a)continue;let at=Math.min(4,(j+a)/r*5|0),nt=1-Math.sqrt(_)/o,it=(g.kind===0?P.plant:P.meat)+at;nt>s[it]&&(s[it]=nt)}}h=this.creatureGrid,f=Math.max(0,(t.x-o)/h.cell|0),m=Math.min(h.cols-1,(t.x+o)/h.cell|0),d=Math.max(0,(t.y-o)/h.cell|0),M=Math.min(h.rows-1,(t.y+o)/h.cell|0);let T=null,I=1/0,v=null,O=1/0;for(let A=d;A<=M;A++)for(let C=f;C<=m;C++){let N=h.buckets[A*h.cols+C];for(let u=0;u<N.length;u++){let g=N[u];if(g===t||!g.alive)continue;let S=g.x-t.x,Z=g.y-t.y,_=S*S+Z*Z;if(_>i)continue;let j=bt(Math.atan2(Z,S)-l);if(j<-a||j>a)continue;let at=Math.min(4,(j+a)/r*5|0),nt=1-Math.sqrt(_)/o;nt>s[P.creature+at]&&(s[P.creature+at]=nt),_<I&&(I=_,T=g);let it=t.radius+g.radius+3;_<it*it&&Math.abs(j)<.9&&_<O&&(O=_,v=g)}}T&&(s[P.rivalSize]=Math.tanh(Math.log(T.radius/t.radius)*2),s[P.kinship]=T.speciesId===t.speciesId?1:0),t.prey=v;let L=Math.cos(l),y=Math.sin(l),k=L>1e-6?(this.width-t.x)/L:L<-1e-6?-t.x/L:1/0,p=y>1e-6?(this.height-t.y)/y:y<-1e-6?-t.y/y:1/0;s[P.wall]=Math.max(0,1-Math.min(k,p)/o),s[P.energy]=t.energy/t.maxEnergy,s[P.health]=t.health/t.maxHealth,s[P.speed]=Math.min(1,t.speed/2),s[P.pulse]=Math.sin(t.age*.06);let E=t.brain.output;s[P.memA]=E[D.memA],s[P.memB]=E[D.memB],s[P.bias]=1}act(t){let s=t.brain.output,n=t.genome.traits,o=n.size,i=s[D.thrust];i<0&&(i*=.3),t.thrust=i,t.turn=s[D.turn],t.angle=bt(t.angle+t.turn*.13/Math.sqrt(o));let a=i*.12*n.speed;t.vx=(t.vx+Math.cos(t.angle)*a)*.9,t.vy=(t.vy+Math.sin(t.angle)*a)*.9,t.x+=t.vx,t.y+=t.vy;let r=t.radius;t.x<r&&(t.x=r,t.vx=Math.abs(t.vx)*.5),t.x>this.width-r&&(t.x=this.width-r,t.vx=-Math.abs(t.vx)*.5),t.y<r&&(t.y=r,t.vy=Math.abs(t.vy)*.5),t.y>this.height-r&&(t.y=this.height-r,t.vy=-Math.abs(t.vy)*.5),t.speed=Math.hypot(t.vx,t.vy),t.wiggle+=.15+t.speed*.5;let l=this.foodGrid,h=r+3,f=Math.max(0,(t.x-h)/l.cell|0),m=Math.min(l.cols-1,(t.x+h)/l.cell|0),d=Math.max(0,(t.y-h)/l.cell|0),M=Math.min(l.rows-1,(t.y+h)/l.cell|0),T=1-.9*n.diet*n.diet,I=.2+.8*n.diet;for(let v=d;v<=M;v++)for(let O=f;O<=m;O++){let L=l.buckets[v*l.cols+O];for(let y=0;y<L.length;y++){let k=L[y];if(!k.alive)continue;let p=k.x-t.x,E=k.y-t.y;if(!(p*p+E*E>h*h)){if(t.energy>=t.maxEnergy)break;k.alive=!1,k.kind===0?(t.energy+=k.energy*T,t.plankton++):(t.energy+=k.energy*I,t.carrion++)}}}if(t.energy>t.maxEnergy&&(t.energy=t.maxEnergy),t.bite=s[D.bite],t.sinceBite++,t.sinceHurt++,t.biteCooldown>0&&t.biteCooldown--,t.bite>0&&t.biteCooldown===0){t.biteCooldown=14,t.energy-=.4*o;let v=t.prey;if(v&&v.alive){t.sinceBite=0;let O=Math.min(1,t.age/t.maturity),L=(2+14*n.diet)*o*(.5+.5*O);v.health-=L,v.sinceHurt=0;let y=Math.min(Math.max(0,v.energy),L*1.2);if(v.energy-=y,t.energy=Math.min(t.maxEnergy,t.energy+y*I*1.5),v.health<=0){let k=Math.min(t.maxEnergy-t.energy,this.carcassEnergy(v)*.5);t.energy+=k*I,this.kill(v,"predation",t,k),t.kills++,this.totalKills++;let p=this.species.get(t.speciesId);p.kills++,this.firstKill||(this.firstKill=!0,this.log("record",`First blood: a ${p.name} kills a ${this.species.get(v.speciesId).name}.`,[t.speciesId,v.speciesId]))}}}}metabolise(t,s){let n=t.genome.traits,o=n.size;t.age++;let i=Math.min(1,t.age/t.maturity);t.radius=t.radiusFull*(.55+.45*i);let a=o*o,l=.018*(o*Math.sqrt(o))+.03*Math.abs(t.thrust)*n.speed*n.speed*a+7e-5*n.sense+.0022*n.fov;if(t.health<t.maxHealth){let h=Math.min(t.maxHealth-t.health,.04*a);t.health+=h,l+=h}if(t.energy-=l,t.health<=0)return this.kill(t,"predation");if(t.energy<=0)return this.kill(t,"starvation");if(t.age>t.lifespan)return this.kill(t,"age");i>=1&&t.energy>=n.fertility*t.maxEnergy&&this.creatures.length+s.length<this.opts.maxPopulation&&this.reproduce(t,s)}reproduce(t,s){let n=xt(t.genome,this.rng),o=this.classify(n,t.speciesId),i=t.radius+4,a=this.spawnCreature(n,o,{x:Math.min(this.width-3,Math.max(3,t.x-Math.cos(t.angle)*i)),y:Math.min(this.height-3,Math.max(3,t.y-Math.sin(t.angle)*i)),angle:t.angle+Math.PI+this.rng.gauss()*.6,generation:t.generation+1,parentId:t.id}),r=t.energy*t.genome.traits.invest;t.energy-=r*1.15+10,a.energy=Math.min(a.maxEnergy,r),t.children++,t.lastChildId=a.id,s.push(a)}carcassEnergy(t){return 26*t.genome.traits.size**2*(.55+.45*Math.min(1,t.age/t.maturity))+Math.max(0,t.energy)*.5}kill(t,s,n=null,o=0){if(!t.alive)return;t.alive=!1,t.cause=s,t.killerId=n?n.id:null,t.diedTick=this.tick;let i=this.carcassEnergy(t)-o;i>2&&this.dropCarrion(t.x,t.y,i,1+Math.floor(t.genome.traits.size*1.5));let a=this.species.get(t.speciesId);if(a.population--,a.population===0&&(a.extinctTick=this.tick,a.peak>=4)){let r=((this.tick-a.bornTick)/R).toFixed(1);this.log("extinction",`${a.name} is extinct after ${r} days (peak ${a.peak}).`,[a.id])}}record(){let t=0,s=0;for(let a of this.creatures)t+=a.genome.traits.diet,s+=a.genome.traits.size;let n=this.creatures.length||1,o=0;for(let a of this.food)a.kind===1&&o++;this.samples.push({tick:this.tick,population:this.creatures.length,plankton:this.plankton,carrion:o,diet:t/n,size:s/n,species:this.livingSpecies().length,season:this.season});let i=this.samples.length-1;for(let a of this.speciesOrder){if(a.closed)continue;let r=i-a.historyStart;r>=0&&(a.history[r]=a.population),a.extinctTick!==null&&(a.closed=!0)}this.samples.length>ye&&this.compressHistory()}compressHistory(){this.samples=this.samples.filter((t,s)=>s%2===0);for(let t of this.speciesOrder){let s=Math.floor(t.historyStart/2),n=[];for(let o=0;o<t.history.length;o++){let i=Math.floor((t.historyStart+o)/2)-s;n[i]=Math.max(n[i]??0,t.history[o]??0)}t.historyStart=s,t.history=n}this.sampleEvery*=2}log(t,s,n=[]){this.events.push({tick:this.tick,kind:t,text:s,speciesIds:n}),this.events.length>Ft&&this.events.splice(0,this.events.length-Ft),this.onEvent?.(this.events[this.events.length-1])}};function xe(e,t){let s=[],n=t.diet-e.diet;Math.abs(n)>.08&&s.push(n>0?"more carnivorous":"more herbivorous");let o=t.size-e.size;Math.abs(o)>.15&&s.push(o>0?"larger":"smaller");let i=t.speed-e.speed;Math.abs(i)>.15&&s.push(i>0?"faster":"slower");let a=t.sense-e.sense;return Math.abs(a)>25&&s.push(a>0?"sharper-eyed":"shorter-sighted"),s.length?`, ${s.slice(0,2).join(" and ")}`:", rewired but outwardly similar"}var we=["ground","surface","raised","ink","ink-soft","muted","rule","rule-soft","accent","pool","pool-deep","pool-grid","pool-grid-major","plankton","carrion","upwelling","grazer","omnivore","hunter","focus","species-l","species-s"],w={dark:!1,version:0},Mt=new Map;function Nt(){let e=getComputedStyle(document.documentElement);for(let t of we)w[ke(t)]=e.getPropertyValue(`--${t}`).trim();w.dark=e.getPropertyValue("color-scheme").includes("dark"),w.version++,Mt.clear()}function ke(e){return e.replace(/-(\w)/g,(t,s)=>s.toUpperCase())}function H(e,t=1){let s=`${Math.round(e)}|${t}`,n=Mt.get(s);return n||(n=`hsla(${Math.round(e)}, ${w.speciesS}, ${w.speciesL}, ${t})`,Mt.set(s,n)),n}function Wt(e){return e>.55?"hunter":e>.3?"omnivore":"grazer"}var _t={grazer:"Grazer",omnivore:"Omnivore",hunter:"Hunter"};function Gt(e){Nt();let t=()=>{Nt(),e()};window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change",t),new MutationObserver(t).observe(document.documentElement,{attributes:!0,attributeFilter:["data-theme"]})}var V=Math.PI*2,ct=class{constructor(){this.x=0,this.y=0,this.scale=1,this.minScale=.1,this.w=1,this.h=1}fit(t){this.scale=Math.min(this.w/t.width,this.h/t.height)*.97,this.minScale=this.scale*.8,this.x=t.width/2,this.y=t.height/2}toWorld(t,s){return{x:(t-this.w/2)/this.scale+this.x,y:(s-this.h/2)/this.scale+this.y}}zoomAt(t,s,n){let o=this.toWorld(t,s);this.scale=Math.min(this.minScale*14,Math.max(this.minScale,this.scale*n));let i=this.toWorld(t,s);this.x+=o.x-i.x,this.y+=o.y-i.y}clamp(t){let s=this.w/2/this.scale,n=this.h/2/this.scale;this.x=s*2>=t.width?t.width/2:Math.min(t.width-s,Math.max(s,this.x)),this.y=n*2>=t.height?t.height/2:Math.min(t.height-n,Math.max(n,this.y))}};function qt(e,t,s,n){let{w:o,h:i}=s,a=n.dpr;e.setTransform(a,0,0,a,0,0),e.fillStyle=w.poolDeep,e.fillRect(0,0,o,i);let r={k:a*s.scale,e:a*(o/2-s.x*s.scale),f:a*(i/2-s.y*s.scale)};e.setTransform(r.k,0,0,r.k,r.e,r.f);let l=1/s.scale;e.fillStyle=w.pool,e.beginPath(),e.roundRect(0,0,t.width,t.height,18),e.fill();for(let d of t.upwellings){let M=e.createRadialGradient(d.x,d.y,0,d.x,d.y,d.r*1.4);M.addColorStop(0,w.upwelling),M.addColorStop(1,"rgba(0,0,0,0)"),e.globalAlpha=.35+.65*d.intensity,e.fillStyle=M,e.fillRect(d.x-d.r*1.4,d.y-d.r*1.4,d.r*2.8,d.r*2.8)}e.globalAlpha=1,be(e,t,s,l);let h=Math.max(1.6,1.2*l);e.fillStyle=w.plankton,e.beginPath();for(let d of t.food)d.kind===0&&(e.moveTo(d.x+h,d.y),e.arc(d.x,d.y,h,0,V));e.fill(),e.fillStyle=w.carrion,e.beginPath();for(let d of t.food){if(d.kind!==1)continue;let M=Math.max(1.4,1+Math.sqrt(d.energy)*.32);e.moveTo(d.x+M,d.y),e.arc(d.x,d.y,M,0,V)}e.fill();let f=n.focusSpecies,m=n.selected;if(f){e.globalAlpha=.18;for(let d of t.creatures)d.speciesId!==f&&vt(e,t,d,l,r);e.globalAlpha=1;for(let d of t.creatures)d.speciesId===f&&vt(e,t,d,l,r)}else for(let d of t.creatures)vt(e,t,d,l,r);e.setTransform(r.k,0,0,r.k,r.e,r.f),m&&Me(e,t,m,l)}function be(e,t,s,n){if(!(50/n<7)){e.lineWidth=n,e.strokeStyle=w.poolGrid,e.beginPath();for(let i=50;i<t.width;i+=50)i%250!==0&&(e.moveTo(i,0),e.lineTo(i,t.height));for(let i=50;i<t.height;i+=50)i%250!==0&&(e.moveTo(0,i),e.lineTo(t.width,i));e.stroke(),e.strokeStyle=w.poolGridMajor,e.lineWidth=n*1.4,e.beginPath();for(let i=250;i<t.width;i+=250)e.moveTo(i,0),e.lineTo(i,t.height);for(let i=250;i<t.height;i+=250)e.moveTo(0,i),e.lineTo(t.width,i);e.stroke()}}function vt(e,t,s,n,o){let i=t.species.get(s.speciesId),a=s.genome.traits,r=s.radius,l=Math.max(0,Math.min(1,s.energy/s.maxEnergy)),h=Math.cos(s.angle),f=Math.sin(s.angle),m=e.globalAlpha;e.setTransform(o.k*h,o.k*f,-o.k*f,o.k*h,o.e+o.k*s.x,o.f+o.k*s.y),w.dark&&(e.fillStyle=H(i.hue,.1),e.beginPath(),e.arc(0,0,r*2.3,0,V),e.fill());let d=r*(1.1+Math.max(0,s.thrust)*.9),M=Math.sin(s.wiggle)*r*.55;if(e.strokeStyle=H(i.hue,.75),e.lineWidth=Math.max(r*.28,n),e.lineCap="round",e.beginPath(),e.moveTo(-r*.9,0),e.quadraticCurveTo(-r*.9-d*.55,M,-r*.9-d,-M*.6),e.stroke(),a.diet>.45){let T=s.sinceBite<7?.75:.28;e.lineWidth=Math.max(r*.22,n),e.beginPath(),e.moveTo(r*.8,-r*.25),e.lineTo(r*.8+Math.cos(-T)*r*.75,-r*.25+Math.sin(-T)*r*.75),e.moveTo(r*.8,r*.25),e.lineTo(r*.8+Math.cos(T)*r*.75,r*.25+Math.sin(T)*r*.75),e.stroke()}if(e.fillStyle=H(i.hue,Math.round((.45+.55*l)*10)/10),e.beginPath(),e.ellipse(0,0,r*1.15,r*.82,0,0,V),e.fill(),r/n>3){let T=Math.min(1.2,a.fov/4);e.fillStyle=w.pool,e.beginPath(),e.arc(Math.cos(T)*r*.62,Math.sin(T)*r*.5,r*.17,0,V),e.arc(Math.cos(T)*r*.62,-Math.sin(T)*r*.5,r*.17,0,V),e.fill()}s.sinceHurt<10&&(e.globalAlpha=m*(1-s.sinceHurt/10),e.strokeStyle=w.carrion,e.lineWidth=Math.max(1.5*n,r*.15),e.beginPath(),e.ellipse(0,0,r*1.45,r*1.1,0,0,V),e.stroke(),e.globalAlpha=m)}function Me(e,t,s,n){let o=s.genome.traits,i=s.radius;if(s.alive){let a=s.brain.input,r=o.fov/2;for(let l=0;l<5;l++){let h=s.angle-r+l*o.fov/5,f=h+o.fov/5,m=a[P.plant+l],d=a[P.meat+l],M=a[P.creature+l],T=Math.max(m,d,M);e.fillStyle=M===T&&M>0?w.focus:d===T&&d>0?w.carrion:w.plankton,e.globalAlpha=.05+T*.28,e.beginPath(),e.moveTo(s.x,s.y),e.arc(s.x,s.y,o.sense,h,f),e.closePath(),e.fill()}e.globalAlpha=.55,e.strokeStyle=w.focus,e.lineWidth=n,e.setLineDash([4*n,4*n]),e.beginPath(),e.moveTo(s.x,s.y),e.arc(s.x,s.y,o.sense,s.angle-r,s.angle+r),e.closePath(),e.stroke(),e.setLineDash([]),e.globalAlpha=1}e.strokeStyle=w.focus,e.lineWidth=2*n,e.globalAlpha=s.alive?1:.5,e.beginPath(),e.arc(s.x,s.y,i*1.6+5*n,0,V),e.stroke(),e.globalAlpha=1}function Ut(e,t,s,n){let o=null,i=1/0;for(let a of e.creatures){let r=Math.hypot(a.x-t,a.y-s)-a.radius;r<n&&r<i&&(i=r,o=a)}return o}function St(e,t){let s=Math.min(2,window.devicePixelRatio||1),n=Math.max(1,e.clientWidth),o=t??e.clientHeight;(e.width!==Math.round(n*s)||e.height!==Math.round(o*s))&&(e.width=Math.round(n*s),e.height=Math.round(o*s),e.style.height=`${o}px`);let i=e.getContext("2d");return i.setTransform(s,0,0,s,0,0),{ctx:i,w:n,h:o}}function ve(e){if(e<=10)return 10;let t=10**Math.floor(Math.log10(e));for(let s of[1,1.5,2,2.5,3,4,5,6,8,10])if(s*t>=e)return s*t;return e}function Kt(e,t,s){let{ctx:n,w:o,h:i}=St(e,170);n.clearRect(0,0,o,i);let a=t.samples,r=a.length,l=30,h=6,f=8,m=6,d=22+m,M=o-l-h,T=i-f-d;if(r<2)return;let I=new Map;for(let u of t.speciesOrder){let g=0;for(let S of u.history)g+=S??0;g>0&&I.set(u,g+u.population*50)}let v=[...I.keys()].sort((u,g)=>I.get(g)-I.get(u)).slice(0,7);v.sort((u,g)=>u.bornTick-g.bornTick);let O=new Set(v),L=0;for(let u of a)L=Math.max(L,u.population,u.plankton);let y=ve(L),k=u=>l+u/(r-1)*M,p=u=>f+T-u/y*T;n.font="10px 'IBM Plex Mono', monospace",n.fillStyle=w.muted,n.strokeStyle=w.ruleSoft,n.lineWidth=1,n.textAlign="right",n.textBaseline="middle";for(let u=0;u<=2;u++){let g=y/2*u,S=Math.round(p(g))+.5;n.beginPath(),n.moveTo(l,S),n.lineTo(o-h,S),n.stroke(),n.fillText(String(g),l-5,S)}let E=new Float32Array(r),A=(u,g)=>{let S=g-u.historyStart;return S>=0&&S<u.history.length?u.history[S]??0:0},C=v.map(u=>({color:H(u.hue,.85),get:g=>A(u,g)}));C.push({color:w.rule,get:u=>{let g=a[u].population;for(let S of v)g-=A(S,u);return Math.max(0,g)}});for(let u of C){let g=Float32Array.from(E);for(let S=0;S<r;S++)E[S]+=u.get(S);n.fillStyle=u.color,n.beginPath(),n.moveTo(k(0),p(E[0]));for(let S=1;S<r;S++)n.lineTo(k(S),p(E[S]));for(let S=r-1;S>=0;S--)n.lineTo(k(S),p(g[S]));n.closePath(),n.fill()}n.strokeStyle=w.plankton,n.lineWidth=1.5,n.setLineDash([3,3]),n.beginPath();for(let u=0;u<r;u++)(u?n.lineTo:n.moveTo).call(n,k(u),p(a[u].plankton));n.stroke(),n.setLineDash([]);let N=f+T+3;for(let u=0;u<r-1;u++)n.globalAlpha=.15+.85*a[u].season,n.fillStyle=w.plankton,n.fillRect(k(u),N,k(u+1)-k(u)+.5,m);if(n.globalAlpha=1,n.fillStyle=w.muted,n.textBaseline="top",n.textAlign="left",n.fillText(`day ${(a[0].tick/R).toFixed(0)}`,l,N+m+4),n.textAlign="right",n.fillText(`day ${(a[r-1].tick/R).toFixed(1)}`,o-h,N+m+4),n.textAlign="center",n.fillText("season",l+M/2,N+m+4),s){let u=v.map(g=>g.id).join(",")+w.version;s.dataset.key!==u&&(s.dataset.key=u,s.innerHTML=v.map(g=>`<span style="--c:${H(g.hue)}"><i>${g.name}</i></span>`).join("")+`<span style="--c:${w.rule}">Others</span><span style="--c:${w.plankton}">Plankton (dashed)</span>`)}return{topSet:O}}var Q=15;function Yt(e){let t=e.speciesOrder.filter(l=>l.peak>=3||l.population>0),s=new Set(t.map(l=>l.id)),n=l=>{let h=l.parentId?e.species.get(l.parentId):null;for(;h&&!s.has(h.id);)h=h.parentId?e.species.get(h.parentId):null;return h},o=new Map,i=[];for(let l of t){let h=n(l);h?(o.has(h.id)||o.set(h.id,[]),o.get(h.id).push(l)):i.push(l)}let a=[],r=(l,h)=>{a.push({sp:l,parent:h});for(let f of o.get(l.id)??[])r(f,l)};for(let l of i)r(l,null);return a}function jt(e,t,s,n){let o=Math.max(120,s.length*Q+30),{ctx:i,w:a,h:r}=St(e,o);i.clearRect(0,0,a,r);let l=Math.max(2,t.samples.length),h=6,f=10,m=6,d=a-h-f,M=y=>h+y/(l-1)*d,T=1;for(let{sp:y}of s)T=Math.max(T,y.peak);let I=new Map(s.map((y,k)=>[y.sp.id,k])),v=y=>m+y*Q+Q/2;i.font="10px 'IBM Plex Mono', monospace",i.fillStyle=w.muted,i.strokeStyle=w.ruleSoft,i.textBaseline="bottom";let O=t.samples.at(-1)?.tick/R||1,L=[1,2,5,10,20,50,100,200,500].find(y=>y>=O/6)??1e3;for(let y=0;y<=O;y+=L){let k=t.samples.findIndex(E=>E.tick/R>=y);if(k<0)continue;let p=Math.round(M(k))+.5;i.beginPath(),i.moveTo(p,m),i.lineTo(p,r-16),i.stroke(),i.textAlign=y===0?"left":"center",i.fillText(`d${Math.round(y)}`,p,r-2)}i.strokeStyle=w.muted,i.lineWidth=1,i.globalAlpha=.55,i.beginPath();for(let y=0;y<s.length;y++){let{sp:k,parent:p}=s[y];if(!p)continue;let E=Math.round(M(k.historyStart))+.5;i.moveTo(E,v(I.get(p.id))),i.lineTo(E,v(y))}i.stroke(),i.globalAlpha=1;for(let y=0;y<s.length;y++){let{sp:k}=s[y],p=k.history,E=v(y),A=n&&n!==k.id;i.fillStyle=H(k.hue,A?.25:k.population>0?.95:.6),i.beginPath();let C=p.length,N=g=>{let S=p[g]??0;return S>0?Math.max(.7,Q*.47*Math.sqrt(S/T)):.35},u=M(k.historyStart);i.moveTo(u,E);for(let g=0;g<C;g++)i.lineTo(M(k.historyStart+g),E-N(g));for(let g=C-1;g>=0;g--)i.lineTo(M(k.historyStart+g),E+N(g));i.closePath(),i.fill(),k.population>0&&(i.beginPath(),i.arc(M(k.historyStart+C-1)+2,E,2,0,Math.PI*2),i.fill()),n===k.id&&(i.strokeStyle=w.focus,i.lineWidth=1,i.strokeRect(h-3,E-Q/2,d+6,Q))}return{rowAt:y=>s[Math.floor((y-m)/Q)]??null,x:M,n:l}}function Se(e){let t=gt[e],s=t.match(/^(\w+) (\d)$/);if(!s)return t;let n=Number(s[2])-1,o=4/2,i=n<o?`L${o-n}`:n>o?`R${n-o}`:"ahead";return`${s[1]} ${i}`}function Vt(e,t){let s=G*13+16,{ctx:n,w:o,h:i}=St(e,s);n.clearRect(0,0,o,i);let a=t.genome.weights,{input:r,hidden:l,output:h}=t.brain,f=92,m=86,d=f+6,M=o-m-6,T=(d+M)/2,I=p=>10+p*((i-20)/(G-1)),v=p=>10+(i-20)*((p+.5)/B),O=p=>10+(i-20)*((p+.5)/J),L=w.focus,y=w.hunter;n.lineWidth=1;for(let p=0;p<B;p++)for(let E=0;E<G;E++){let A=a[F(p,E)]*r[E],C=Math.min(1,Math.abs(A)*.6);C<.04||(n.globalAlpha=C*.8,n.strokeStyle=A>0?L:y,n.beginPath(),n.moveTo(d,I(E)),n.lineTo(T,v(p)),n.stroke())}for(let p=0;p<J;p++)for(let E=0;E<B;E++){let A=a[W(p,E)]*l[E],C=Math.min(1,Math.abs(A)*.6);C<.04||(n.globalAlpha=C*.8,n.lineWidth=1+C,n.strokeStyle=A>0?L:y,n.beginPath(),n.moveTo(T,v(E)),n.lineTo(M,O(p)),n.stroke())}n.globalAlpha=1,n.lineWidth=1;let k=(p,E,A,C)=>{n.fillStyle=w.raised,n.beginPath(),n.arc(p,E,C,0,Math.PI*2),n.fill(),n.globalAlpha=Math.min(1,Math.abs(A)),n.fillStyle=A>=0?L:y,n.fill(),n.globalAlpha=1,n.strokeStyle=w.muted,n.stroke()};n.font="10.5px 'IBM Plex Mono', monospace",n.textBaseline="middle";for(let p=0;p<G;p++)k(d,I(p),r[p],3.5),n.fillStyle=Math.abs(r[p])>.05?w.ink:w.muted,n.textAlign="right",n.fillText(Se(p),d-8,I(p));for(let p=0;p<B;p++)k(T,v(p),l[p],5);for(let p=0;p<J;p++)k(M,O(p),h[p],7),n.textAlign="left",n.fillStyle=w.ink,n.fillText(mt[p],M+12,O(p)-6),n.fillStyle=w.muted,n.fillText(h[p].toFixed(2),M+12,O(p)+7)}function Y(e){return String(e).replace(/[&<>"']/g,t=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[t])}var dt=e=>(e/R).toFixed(1);function Zt(e,t,s,n){let o=t.livingSpecies().sort((l,h)=>h.population-l.population),i=o[0]?.population||1,a=new Map([...e.children].map(l=>[Number(l.dataset.id),l])),r=new Set;for(let l of o){r.add(l.id);let h=a.get(l.id);h||(h=document.createElement("li"),h.dataset.id=l.id,h.innerHTML=`<button type="button" class="species-row">
+          <span class="swatch"></span>
+          <span><span class="sp-name"></span><br /><span class="sp-meta"></span></span>
+          <span class="diet-tag"></span>
+          <span class="sp-count"></span>
+        </button>`,h.firstElementChild.addEventListener("click",()=>n(l.id)));let f=Wt(l.founder.traits.diet),m=h.firstElementChild;m.setAttribute("aria-pressed",String(s===l.id)),m.style.setProperty("--c",H(l.hue)),h.querySelector(".swatch").style.setProperty("--c",H(l.hue)),h.querySelector(".sp-name").textContent=l.name,h.querySelector(".sp-meta").textContent=`since day ${dt(l.bornTick)} \xB7 ${l.kills?`${l.kills} kills`:`${l.totalBorn} born`}`;let d=h.querySelector(".diet-tag");d.className=`diet-tag ${f}`,d.textContent=_t[f],h.querySelector(".sp-count").textContent=l.population,m.title=`${l.population} alive \xB7 ${Math.round(l.population/i*100)}% of the largest species`,e.appendChild(h)}for(let[l,h]of a)r.has(l)||h.remove()}var Te=[["size",e=>`${(e*10).toFixed(0)} \xB5m`],["diet",e=>e<.3?"grazer":e<.55?"omnivore":"hunter"],["speed",e=>e.toFixed(2)],["sense",e=>`${e.toFixed(0)} \xB5m`],["fov",e=>`${Math.round(e*180/Math.PI)}\xB0`],["fertility",e=>`${Math.round(e*100)}%`],["invest",e=>`${Math.round(e*100)}%`],["mutation",e=>e.toFixed(3)]];function Xt(e,t,s,n){if(!s){e.innerHTML=`<div class="empty">
+      <p>Click any creature in the pool to see what it senses, how its neural network is responding, and the genes it inherited.</p>
+      <button class="btn" type="button" data-act="random">Examine a random creature</button>
+    </div>`,e.querySelector("[data-act=random]").addEventListener("click",n.random);return}let o=t.species.get(s.speciesId),i=o.parentId?t.species.get(o.parentId):null;e.innerHTML=`
+    <div class="specimen-head">
+      <div class="eyebrow">Specimen no. ${s.id}</div>
+      <h2 style="color:${H(o.hue)}">${Y(o.name)}</h2>
+      <p>Generation ${s.generation} \xB7 ${i?`descended from <i>${Y(i.name)}</i>`:"a founding lineage"}</p>
+    </div>
+    <div class="row-actions">
+      <span class="status" data-f="status"></span>
+      <button class="btn" type="button" data-act="follow"></button>
+      <button class="btn" type="button" data-act="species">Highlight species</button>
+      <button class="btn" type="button" data-act="child" hidden>Examine its latest offspring</button>
+      <button class="btn" type="button" data-act="clear">Close</button>
+    </div>
+    <div class="meters">
+      <div class="meter"><span>Energy</span><span class="track"><span class="fill" data-f="energy"></span></span><output data-f="energy-v"></output></div>
+      <div class="meter"><span>Health</span><span class="track"><span class="fill" data-f="health"></span></span><output data-f="health-v"></output></div>
+      <div class="meter"><span>Age</span><span class="track"><span class="fill" data-f="age"></span></span><output data-f="age-v"></output></div>
+    </div>
+    <div class="tally">
+      <div><b data-f="plankton"></b><span>plankton</span></div>
+      <div><b data-f="carrion"></b><span>carrion</span></div>
+      <div><b data-f="kills"></b><span>kills</span></div>
+      <div><b data-f="children"></b><span>offspring</span></div>
+    </div>
+    <section>
+      <div class="section-head"><h2>Nervous system</h2><small>live \xB7 ${s.genome.weights.length} synapses</small></div>
+      <canvas class="chart" id="brain-chart"></canvas>
+      <div class="legend"><span style="--c:var(--focus)">excites</span><span style="--c:var(--hunter)">inhibits</span></div>
+      <p class="note">Brightness shows the signal flowing right now: each synapse's weight times how active its source is. The two memory outputs loop back in as inputs on the next tick.</p>
+    </section>
+    <section>
+      <div class="section-head"><h2>Genome</h2><small>range markers show the possible extremes</small></div>
+      <div class="meters">
+        ${Te.map(([a,r])=>{let l=st[a],h=s.genome.traits[a],f=(h-l.min)/(l.max-l.min)*100;return`<div class="meter"><span>${l.label}</span><span class="track${a==="diet"?" diet":""}">${a==="diet"?`<span class="pin" style="left:${f}%"></span>`:`<span class="fill" style="width:${f}%"></span>`}</span><output>${r(h)}</output></div>`}).join("")}
+      </div>
+    </section>`,e.querySelector("[data-act=follow]").addEventListener("click",n.follow),e.querySelector("[data-act=species]").addEventListener("click",()=>n.focusSpecies(s.speciesId)),e.querySelector("[data-act=child]").addEventListener("click",n.child),e.querySelector("[data-act=clear]").addEventListener("click",n.clear)}function Jt(e,t,s,n){if(!s)return;let o=f=>e.querySelector(`[data-f="${f}"]`);if(!o("energy"))return;let i=Math.max(0,s.energy/s.maxEnergy);o("energy").style.width=`${i*100}%`,o("energy-v").textContent=`${Math.max(0,s.energy).toFixed(0)}/${s.maxEnergy.toFixed(0)}`;let a=Math.max(0,s.health/s.maxHealth);o("health").style.width=`${a*100}%`,o("health-v").textContent=`${Math.round(a*100)}%`,o("age").style.width=`${Math.min(100,s.age/s.lifespan*100)}%`,o("age-v").textContent=`${dt(s.age)} d`,o("plankton").textContent=s.plankton,o("carrion").textContent=s.carrion,o("kills").textContent=s.kills,o("children").textContent=s.children;let r=o("status");if(s.alive)r.className="status",r.textContent=s.age<s.maturity?"Alive \xB7 juvenile":"Alive";else{r.className="status dead";let f=`Dead \xB7 ${Bt[s.cause]} on day ${dt(s.diedTick)}`;if(s.cause==="predation"&&s.killerId){let m=t.byId.get(s.killerId);m&&(f=`Dead \xB7 eaten by a ${t.species.get(m.speciesId).name}`)}r.textContent=f}let l=e.querySelector("[data-act=follow]");l.textContent=n?"Stop following":"Follow",l.hidden=!s.alive;let h=s.lastChildId?t.byId.get(s.lastChildId):null;e.querySelector("[data-act=child]").hidden=!h}function Qt(e,t,s){let n=document.createElement("li"),o=Y(t.text);for(let i of t.speciesIds){let a=e.species.get(i);a&&(o=o.replace(Y(a.name),`<em data-sp="${i}" style="color:${H(a.hue)}">${Y(a.name)}</em>`))}n.innerHTML=`<time>d ${dt(t.tick)}</time><span><span class="kind ${t.kind}">${t.kind}</span>${o}</span>`;for(let i of n.querySelectorAll("em[data-sp]"))i.addEventListener("click",()=>s(Number(i.dataset.sp)));return n}var x=e=>document.getElementById(e),ee=R*5,te=["kelp","coral","brine","shoal","reef","lagoon","eddy","surf","tide","spray","drift","wrack"],Ee={1:2,4:8,16:32,64:1/0},c={world:null,paused:!1,speed:1,tool:"inspect",selected:null,following:!1,focusSpecies:null,tab:"census",warming:0,dirtyPanels:!0,lastPanel:0,lineage:null},z=x("pool"),Pe=z.getContext("2d"),b=new ct,pt={dpr:1,get focusSpecies(){return c.focusSpecies},get selected(){return c.selected}};function Ce(){let e=decodeURIComponent(location.hash.slice(1));return/^[\w.~-]{1,40}$/.test(e)&&!e.startsWith("panel")?e:null}function $e(){return`${te[Math.floor(Math.random()*te.length)]}-${Math.floor(1e3+Math.random()*9e3)}`}function se(e){let t=z.getBoundingClientRect(),s=t.width>0&&t.height>0?t.height/t.width:.625,n=Math.round(Math.min(1400,Math.max(800,1600*s))/50)*50;c.world=new ht({seed:e,width:1600,height:n}),c.world.onEvent=Tt,c.selected=null,c.following=!1,c.focusSpecies=null,c.warming=ee,x("clock-seed").textContent=e,x("log").innerHTML="";for(let o of c.world.events)Tt(o);ne(),b.fit(c.world),Pt(),c.dirtyPanels=!0}function Tt(e){let t=x("log");if(t){for(t.prepend(Qt(c.world,e,ut));t.children.length>250;)t.lastElementChild.remove();x("log-count").textContent=`${c.world.events.length} entries`}}function Ae(){x("log").innerHTML="";for(let e of c.world.events.slice(-250))Tt(e)}function ne(){let e=z.getBoundingClientRect();pt.dpr=Math.min(2,window.devicePixelRatio||1),z.width=Math.max(1,Math.round(e.width*pt.dpr)),z.height=Math.max(1,Math.round(e.height*pt.dpr));let t=Math.abs(b.scale-Math.min(b.w/c.world.width,b.h/c.world.height)*.97)<1e-6;b.w=e.width,b.h=e.height,t||b.scale===1?b.fit(c.world):(b.minScale=Math.min(b.w/c.world.width,b.h/c.world.height)*.97*.8,b.clamp(c.world)),c.dirtyPanels=!0}function ie(e){let t=c.world,s=performance.now();if(c.warming>0){for(;c.warming>0&&performance.now()-s<22;)t.step(),c.warming--;c.warming<=0&&(c.dirtyPanels=!0)}else if(!c.paused){let n=Ee[c.speed],o=0;for(;o<n&&performance.now()-s<14;)t.step(),o++}if(c.selected&&c.following){let n=c.selected;b.x+=(n.x-b.x)*.15,b.y+=(n.y-b.y)*.15,b.clamp(t)}qt(Pe,t,b,pt),Ie(),c.tab==="specimen"&&c.selected&&Vt(x("brain-chart"),c.selected),(c.dirtyPanels||e-c.lastPanel>300)&&(c.lastPanel=e,c.dirtyPanels=!1,Le()),requestAnimationFrame(ie)}function Ie(){let e=c.world;x("clock-day").textContent=e.day.toFixed(1);let t=e.season;x("season-label").textContent=t>.5?"Bloom":"Lean season",x("season-gauge").style.width=`${Math.round(t*100)}%`,x("season-chip").title=`Plankton supply at ${Math.round(20+80*t)}% of peak`;let s=10;for(let a of[10,20,50,100,200,500])a*b.scale<=150&&(s=a);x("scale-line").style.width=`${Math.round(s*b.scale)}px`,x("scale-label").textContent=`${s} \xB5m`;let n=[];if(c.warming>0&&n.push(`<span class="chip">Fast-forwarding the first days\u2026 ${Math.round((1-c.warming/ee)*100)}%</span>`),c.focusSpecies){let a=e.species.get(c.focusSpecies);n.push(`<span class="chip">Highlighting <i style="color:${H(a.hue)}">${Y(a.name)}</i>${a.population?` \xB7 ${a.population}`:" \xB7 extinct"}<button type="button" data-clear="focus" aria-label="Stop highlighting">\xD7</button></span>`)}c.selected&&c.following&&n.push(`<span class="chip">Following no. ${c.selected.id}<button type="button" data-clear="follow" aria-label="Stop following">\xD7</button></span>`),c.tool==="feed"&&n.push('<span class="chip">Click or drag in the pool to scatter plankton</span>');let o=n.join(""),i=x("pool-chips");i.dataset.html!==o&&(i.dataset.html=o,i.innerHTML=o)}function Le(){let e=c.world;if(c.tab==="census"){x("st-pop").textContent=e.creatures.length,x("st-species").textContent=`${e.livingSpecies().length}/${e.speciesOrder.length}`,x("st-plankton").textContent=e.plankton,x("st-gen").textContent=e.maxGeneration;let t=e.samples[0]?.tick??0;x("pop-span").textContent=`days ${(t/R).toFixed(0)}\u2013${e.day.toFixed(0)}`,Kt(x("pop-chart"),e,x("pop-legend")),Zt(x("species-list"),e,c.focusSpecies,ut)}else if(c.tab==="lineage"){let t=Yt(e);x("lineage-count").textContent=`${t.length} shown of ${e.speciesOrder.length} species`,c.lineage=jt(x("lineage-chart"),e,t,c.focusSpecies)}else c.tab==="specimen"&&Jt(x("specimen"),e,c.selected,c.following)}function et(e){c.selected=e,e||(c.following=!1),Pt(),c.dirtyPanels=!0}function Pt(){Xt(x("specimen"),c.world,c.selected,{random:()=>{let e=c.world.creatures;e.length&&et(e[Math.floor(Math.random()*e.length)])},follow:()=>{c.following=!c.following,c.dirtyPanels=!0},focusSpecies:ut,child:()=>{let e=c.world.byId.get(c.selected?.lastChildId);e&&et(e)},clear:()=>et(null)})}function ut(e){c.focusSpecies=c.focusSpecies===e?null:e,c.dirtyPanels=!0}function oe(e){c.tab=e;for(let t of["census","lineage","specimen","log"])x(`tab-${t}`).setAttribute("aria-selected",String(t===e)),x(`panel-${t}`).hidden=t!==e;if(e==="specimen"&&!c.selected&&c.world.creatures.length){let t=c.world.creatures.reduce((s,n)=>n.age>s.age?n:s);et(t)}c.dirtyPanels=!0}function ae(e){c.speed=e;for(let t of x("speed").children)t.setAttribute("aria-pressed",String(Number(t.dataset.speed)===e))}function Et(e){c.tool=e,z.dataset.tool=e;for(let t of x("tool").children)t.setAttribute("aria-pressed",String(t.dataset.tool===e))}function re(e){c.paused=e,x("play-label").textContent=e?"Play":"Pause",x("play").setAttribute("aria-label",e?"Play":"Pause"),x("play-icon").setAttribute("d",e?"M4 2.5v11l9-5.5z":"M4 3h3v10H4zM9 3h3v10H9z")}var U=new Map,$=null;function ft(e){let t=z.getBoundingClientRect();return{x:e.clientX-t.left,y:e.clientY-t.top}}z.addEventListener("pointerdown",e=>{z.setPointerCapture(e.pointerId);let t=ft(e);if(U.set(e.pointerId,t),U.size===2){let[s,n]=[...U.values()];$={kind:"pinch",dist:Math.hypot(s.x-n.x,s.y-n.y)};return}if($={kind:"press",start:t,last:t,moved:!1},c.tool==="feed"){let s=b.toWorld(t.x,t.y);c.world.sprinkle(s.x,s.y),$.kind="feed"}});z.addEventListener("pointermove",e=>{if(!U.has(e.pointerId)||!$)return;let t=ft(e);if(U.set(e.pointerId,t),$.kind==="pinch"&&U.size===2){let[s,n]=[...U.values()],o=Math.hypot(s.x-n.x,s.y-n.y);b.zoomAt((s.x+n.x)/2,(s.y+n.y)/2,o/$.dist),b.clamp(c.world),$.dist=o;return}if($.kind==="feed"){if(Math.hypot(t.x-$.last.x,t.y-$.last.y)>14){let s=b.toWorld(t.x,t.y);c.world.sprinkle(s.x,s.y,8),$.last=t}return}!$.moved&&Math.hypot(t.x-$.start.x,t.y-$.start.y)>5&&($.moved=!0,c.following=!1,z.classList.add("dragging")),$.moved&&(b.x-=(t.x-$.last.x)/b.scale,b.y-=(t.y-$.last.y)/b.scale,b.clamp(c.world)),$.last=t});function le(e){if(U.has(e.pointerId)){if(U.delete(e.pointerId),z.classList.remove("dragging"),$?.kind==="press"&&!$.moved&&e.type==="pointerup"){let t=ft(e),s=b.toWorld(t.x,t.y),n=Ut(c.world,s.x,s.y,10/b.scale);n?(et(n),oe("specimen")):c.selected&&et(null)}U.size===0&&($=null)}}z.addEventListener("pointerup",le);z.addEventListener("pointercancel",le);z.addEventListener("wheel",e=>{e.preventDefault();let t=ft(e);b.zoomAt(t.x,t.y,Math.exp(-e.deltaY*.0015)),b.clamp(c.world)},{passive:!1});x("zoom-in").addEventListener("click",()=>{b.zoomAt(b.w/2,b.h/2,1.4),b.clamp(c.world)});x("zoom-out").addEventListener("click",()=>{b.zoomAt(b.w/2,b.h/2,1/1.4),b.clamp(c.world)});x("zoom-fit").addEventListener("click",()=>{c.following=!1,b.fit(c.world)});x("play").addEventListener("click",()=>re(!c.paused));x("speed").addEventListener("click",e=>{let t=e.target.closest("button[data-speed]");t&&ae(Number(t.dataset.speed))});x("tool").addEventListener("click",e=>{let t=e.target.closest("button[data-tool]");t&&Et(t.dataset.tool)});x("new-pool").addEventListener("click",()=>{let e=$e();try{history.replaceState(null,"",`#${e}`)}catch{}se(e)});for(let e of["census","lineage","specimen","log"])x(`tab-${e}`).addEventListener("click",()=>oe(e));x("pool-chips").addEventListener("click",e=>{let t=e.target.closest("button[data-clear]");t&&(t.dataset.clear==="focus"&&(c.focusSpecies=null),t.dataset.clear==="follow"&&(c.following=!1),c.dirtyPanels=!0)});var Ct=x("lineage-chart"),tt=x("lineage-tip");Ct.addEventListener("pointermove",e=>{let t=c.lineage?.rowAt(e.offsetY);if(!t){tt.hidden=!0;return}let s=t.sp,n=c.world,o=s.parentId?n.species.get(s.parentId):null;tt.innerHTML=`<i style="color:${H(s.hue)}">${Y(s.name)}</i>
+    Day ${(s.bornTick/R).toFixed(1)}\u2013${s.extinctTick===null?"now":(s.extinctTick/R).toFixed(1)}
+    \xB7 peak ${s.peak}${s.population?` \xB7 ${s.population} alive`:" \xB7 extinct"}
+    ${o?`<br />from <i style="display:inline;font-size:13px">${Y(o.name)}</i>`:"<br />founding lineage"}`,tt.hidden=!1;let i=x("lineage-wrap").getBoundingClientRect(),a=Math.min(e.clientX-i.left+12,i.width-tt.offsetWidth-4);tt.style.left=`${Math.max(0,a)}px`,tt.style.top=`${e.clientY-i.top+14}px`});Ct.addEventListener("pointerleave",()=>tt.hidden=!0);Ct.addEventListener("click",e=>{let t=c.lineage?.rowAt(e.offsetY);t&&ut(t.sp.id)});window.addEventListener("keydown",e=>{if(!(e.target.closest("input, textarea")||e.metaKey||e.ctrlKey||e.altKey))if(e.key===" "){if(e.target.closest("button"))return;e.preventDefault(),re(!c.paused)}else["1","2","3","4"].includes(e.key)?ae([1,4,16,64][Number(e.key)-1]):e.key==="f"||e.key==="F"?Et("feed"):e.key==="i"||e.key==="I"?Et("inspect"):e.key==="Escape"&&(et(null),c.focusSpecies=null)});new ResizeObserver(()=>ne()).observe(z);Gt(()=>{c.dirtyPanels=!0,c.world&&(Ae(),Pt())});se(Ce()??"tidepool");requestAnimationFrame(ie);})();
+
+</script>
+</body>
+</html>

@@ -39,6 +39,12 @@ function wrapAngle(a) {
 export class World {
   constructor(options = {}) {
     this.opts = { ...DEFAULTS, ...options };
+    // Pools of other shapes keep the same density of food and life.
+    const area = (this.opts.width * this.opts.height) / (DEFAULTS.width * DEFAULTS.height);
+    for (const key of ['maxPlankton', 'foodRate', 'startPopulation', 'maxPopulation']) {
+      if (options[key] === undefined) this.opts[key] = DEFAULTS[key] * area;
+    }
+    this.opts.startPopulation = Math.round(this.opts.startPopulation);
     this.seed = options.seed ?? 'tidepool';
     this.rng = new Rng(this.seed);
     this.width = this.opts.width;

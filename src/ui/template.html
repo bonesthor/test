@@ -1,0 +1,120 @@
+<title>Tidepool</title>
+<meta name="description" content="An evolving ecosystem of tiny creatures with neural-network brains." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=Atkinson+Hyperlegible:wght@400;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
+/>
+<style>
+/*STYLES*/
+</style>
+
+<div class="app">
+  <header class="masthead">
+    <div class="brand">
+      <h1>Tide<i>pool</i></h1>
+      <p>An ecosystem that evolves while you watch</p>
+    </div>
+    <div class="clock" aria-live="off">
+      <span>Day <b id="clock-day">0.0</b></span>
+      <span class="season-chip" id="season-chip" title="Plankton supply">
+        <span id="season-label">Bloom</span>
+        <span class="gauge"><span id="season-gauge"></span></span>
+      </span>
+      <span>Pool <b id="clock-seed">tidepool</b></span>
+    </div>
+    <div class="controls">
+      <button class="btn primary" id="play" type="button" aria-label="Pause">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path id="play-icon" d="M4 3h3v10H4zM9 3h3v10H9z" /></svg>
+        <span id="play-label">Pause</span>
+      </button>
+      <div class="seg" role="group" aria-label="Speed" id="speed">
+        <button type="button" data-speed="1" aria-pressed="true">1×</button>
+        <button type="button" data-speed="4" aria-pressed="false">4×</button>
+        <button type="button" data-speed="16" aria-pressed="false">16×</button>
+        <button type="button" data-speed="64" aria-pressed="false">Max</button>
+      </div>
+      <div class="seg" role="group" aria-label="Tool" id="tool">
+        <button type="button" data-tool="inspect" aria-pressed="true">Inspect</button>
+        <button type="button" data-tool="feed" aria-pressed="false">Feed</button>
+      </div>
+      <button class="btn" id="new-pool" type="button">New pool</button>
+    </div>
+  </header>
+
+  <main class="stage">
+    <section class="pool-wrap" aria-label="The pool">
+      <canvas id="pool" data-tool="inspect"></canvas>
+      <div class="overlay top-left" id="pool-chips"></div>
+      <div class="overlay bottom-left">
+        <div class="scalebar" aria-hidden="true"><span id="scale-line"></span><em id="scale-label">100 µm</em></div>
+      </div>
+      <div class="overlay bottom-right">
+        <button class="icon-btn" id="zoom-in" type="button" aria-label="Zoom in">+</button>
+        <button class="icon-btn" id="zoom-out" type="button" aria-label="Zoom out">−</button>
+        <button class="icon-btn" id="zoom-fit" type="button" aria-label="Fit the whole pool">⤢</button>
+      </div>
+    </section>
+
+    <aside class="panel">
+      <nav class="tabs" role="tablist" aria-label="Panels">
+        <button role="tab" type="button" id="tab-census" aria-controls="panel-census" aria-selected="true">Census</button>
+        <button role="tab" type="button" id="tab-lineage" aria-controls="panel-lineage" aria-selected="false">Lineage</button>
+        <button role="tab" type="button" id="tab-specimen" aria-controls="panel-specimen" aria-selected="false">Specimen</button>
+        <button role="tab" type="button" id="tab-log" aria-controls="panel-log" aria-selected="false">Field log</button>
+      </nav>
+
+      <div class="tabpanel" role="tabpanel" id="panel-census" aria-labelledby="tab-census">
+        <dl class="stats">
+          <div><dt>Creatures</dt><dd id="st-pop">0</dd></div>
+          <div><dt>Species</dt><dd id="st-species">0</dd></div>
+          <div><dt>Plankton</dt><dd id="st-plankton">0</dd></div>
+          <div><dt>Generation</dt><dd id="st-gen">0</dd></div>
+        </dl>
+        <section>
+          <div class="section-head"><h2>Population</h2><small id="pop-span">last 0 days</small></div>
+          <canvas class="chart" id="pop-chart" height="150"></canvas>
+          <div class="legend" id="pop-legend"></div>
+        </section>
+        <section>
+          <div class="section-head"><h2>Living species</h2><small>tap one to highlight it</small></div>
+          <ul class="species-list" id="species-list"></ul>
+        </section>
+      </div>
+
+      <div class="tabpanel" role="tabpanel" id="panel-lineage" aria-labelledby="tab-lineage" hidden>
+        <section>
+          <div class="section-head"><h2>Tree of life</h2><small id="lineage-count">0 species</small></div>
+          <p class="note">
+            A spindle diagram, as palaeontologists draw the fossil record. Time runs left to right; each spindle is one
+            species and its width is its population. Thin connectors show which species each one branched from.
+          </p>
+        </section>
+        <div class="lineage-scroll" id="lineage-wrap">
+          <canvas class="chart" id="lineage-chart"></canvas>
+          <div class="tooltip" id="lineage-tip" hidden></div>
+        </div>
+      </div>
+
+      <div class="tabpanel" role="tabpanel" id="panel-specimen" aria-labelledby="tab-specimen" hidden>
+        <div id="specimen"></div>
+      </div>
+
+      <div class="tabpanel" role="tabpanel" id="panel-log" aria-labelledby="tab-log" hidden>
+        <section>
+          <div class="section-head"><h2>Field log</h2><small id="log-count"></small></div>
+          <ol class="log" id="log"></ol>
+        </section>
+        <p class="kbd-help">
+          <kbd>Space</kbd> pause · <kbd>1</kbd>–<kbd>4</kbd> speed · <kbd>F</kbd> feed · <kbd>I</kbd> inspect ·
+          <kbd>Esc</kbd> clear selection
+        </p>
+      </div>
+    </aside>
+  </main>
+</div>
+
+<script>
+/*SCRIPT*/
+</script>
