@@ -1,0 +1,17 @@
+{
+  "name": "tidepool",
+  "version": "1.0.0",
+  "description": "An artificial-life tidepool: creatures with neural brains evolve, speciate and go extinct in your browser.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "dev": "node scripts/build.mjs --watch",
+    "test": "node --test test/*.test.js",
+    "headless": "node scripts/headless.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
+  },
+  "license": "MIT"
+}
