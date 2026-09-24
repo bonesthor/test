@@ -125,6 +125,12 @@ export class Soundscape {
     this.note(220, { type: 'triangle', gain: 0.04, decay: 1.8, when: 0.28 });
   }
 
+  // A rising arpeggio for achievements and wins.
+  fanfare() {
+    if (!this.enabled) return;
+    [523, 659, 784, 1047].forEach((f, i) => this.note(f, { gain: 0.04, decay: 1.2, when: i * 0.09 }));
+  }
+
   season(level) {
     if (this.enabled) this.sea.gain.setTargetAtTime(0.025 + 0.05 * level, this.ctx.currentTime, 1.5);
   }

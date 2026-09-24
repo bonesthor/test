@@ -38,8 +38,9 @@ export function primordialGenome(rng, hunter = false) {
   return { traits, weights: primordialWeights(rng, hunter) };
 }
 
-export function mutate(parent, rng) {
-  const m = parent.traits.mutation;
+// `boost` scales every mutation step (the Mutagen power uses it).
+export function mutate(parent, rng, boost = 1) {
+  const m = parent.traits.mutation * boost;
   const traits = {};
   for (const key of TRAIT_KEYS) {
     const t = TRAITS[key];

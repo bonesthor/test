@@ -106,6 +106,59 @@ export function drawPool(ctx, world, cam, view) {
 
   ctx.setTransform(m.k, 0, 0, m.k, m.e, m.f);
   if (selected) drawSelection(ctx, world, selected, px);
+  drawEffects(ctx, world, view, px);
+}
+
+// Player-power feedback: irradiated halos, ripples where a power landed,
+// and a preview of the power's reach under the pointer.
+function drawEffects(ctx, world, view, px) {
+  ctx.strokeStyle = theme.mutagen;
+  ctx.lineWidth = 1.3 * px;
+  ctx.setLineDash([2.5 * px, 2.5 * px]);
+  ctx.beginPath();
+  for (const c of world.creatures) {
+    if (!(c.mutagenUntil > world.tick)) continue;
+    const r = c.radius * 1.9 + 2 * px;
+    ctx.moveTo(c.x + r, c.y);
+    ctx.arc(c.x, c.y, r, 0, TAU);
+  }
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  const now = performance.now();
+  for (const rp of view.ripples) {
+    const age = (now - rp.t0) / 700;
+    if (age < 0 || age >= 1) continue;
+    ctx.globalAlpha = (1 - age) * 0.9;
+    ctx.strokeStyle = theme[rp.color];
+    ctx.lineWidth = (3 - 2 * age) * px;
+    ctx.beginPath();
+    ctx.arc(rp.x, rp.y, rp.r * (0.5 + 0.7 * age), 0, TAU);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+
+  const h = view.hover;
+  if (h) {
+    ctx.fillStyle = theme[h.color];
+    ctx.strokeStyle = theme[h.color];
+    ctx.globalAlpha = 0.08;
+    ctx.beginPath();
+    ctx.arc(h.x, h.y, h.r, 0, TAU);
+    ctx.fill();
+    ctx.globalAlpha = h.affordable ? 0.9 : 0.35;
+    ctx.lineWidth = 1.5 * px;
+    ctx.setLineDash([5 * px, 4 * px]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.beginPath();
+    ctx.moveTo(h.x - 5 * px, h.y);
+    ctx.lineTo(h.x + 5 * px, h.y);
+    ctx.moveTo(h.x, h.y - 5 * px);
+    ctx.lineTo(h.x, h.y + 5 * px);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
 }
 
 function drawGrid(ctx, world, cam, px) {

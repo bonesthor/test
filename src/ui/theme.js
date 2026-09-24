@@ -4,7 +4,7 @@
 const TOKENS = [
   'ground', 'surface', 'raised', 'ink', 'ink-soft', 'muted', 'rule', 'rule-soft', 'accent',
   'pool', 'pool-deep', 'pool-grid', 'pool-grid-major', 'plankton', 'carrion', 'upwelling',
-  'grazer', 'omnivore', 'hunter', 'focus', 'species-l', 'species-s',
+  'grazer', 'omnivore', 'hunter', 'focus', 'mutagen', 'gold', 'species-l', 'species-s',
 ];
 
 export const theme = { dark: false, version: 0 };

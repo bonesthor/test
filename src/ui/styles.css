@@ -20,6 +20,8 @@
   --omnivore: #9a6a12;
   --hunter: #a8483a;
   --focus: #0e6a70;
+  --mutagen: #7a4fd0;
+  --gold: #a87712;
   --shadow: 0 1px 0 rgba(23, 41, 43, 0.04), 0 8px 24px -12px rgba(23, 41, 43, 0.25);
   --species-l: 36%;
   --species-s: 62%;
@@ -52,6 +54,8 @@
     --omnivore: #f0bd57;
     --hunter: #ff7d66;
     --focus: #62d4c6;
+    --mutagen: #b89aff;
+    --gold: #f2c55c;
     --shadow: 0 1px 0 rgba(0, 0, 0, 0.3), 0 10px 30px -12px rgba(0, 0, 0, 0.7);
     --species-l: 66%;
     --species-s: 82%;
@@ -81,6 +85,8 @@
   --omnivore: #f0bd57;
   --hunter: #ff7d66;
   --focus: #62d4c6;
+  --mutagen: #b89aff;
+  --gold: #f2c55c;
   --shadow: 0 1px 0 rgba(0, 0, 0, 0.3), 0 10px 30px -12px rgba(0, 0, 0, 0.7);
   --species-l: 66%;
   --species-s: 82%;
@@ -120,7 +126,7 @@ button {
 .app {
   height: 100%;
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: auto auto minmax(0, 1fr);
   gap: 12px;
   padding-inline: 16px;
   padding-block: 12px 16px;
@@ -1157,6 +1163,419 @@ kbd {
   background: var(--raised);
 }
 
+/* ------------------------------------------------------------ game */
+
+.seg .cost {
+  margin-left: 5px;
+  font: 500 10.5px var(--mono);
+  opacity: 0.75;
+}
+
+.seg .cost:empty {
+  display: none;
+}
+
+.seg button.poor {
+  opacity: 0.45;
+}
+
+#pool[data-tool='cull'],
+#pool[data-tool='mutagen'] {
+  cursor: none;
+}
+
+.mission {
+  display: grid;
+  grid-template-columns: minmax(140px, auto) minmax(0, 1fr) auto auto auto;
+  align-items: center;
+  gap: 10px 22px;
+  padding: 10px 16px;
+  border-radius: 14px;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  box-shadow: inset 4px 0 0 var(--gold);
+}
+
+.mission.danger {
+  box-shadow: inset 4px 0 0 var(--hunter);
+}
+
+.m-title {
+  display: grid;
+  gap: 1px;
+}
+
+.m-title b {
+  font: 400 21px/1.1 var(--display);
+}
+
+.m-goal {
+  display: grid;
+  gap: 4px;
+  font-size: 13px;
+  min-width: 0;
+}
+
+.m-goal small {
+  font: 11.5px var(--mono);
+  color: var(--muted);
+}
+
+.m-goal small.warn {
+  color: var(--hunter);
+}
+
+.m-bar {
+  height: 7px;
+  border-radius: 4px;
+  background: var(--rule-soft);
+  overflow: hidden;
+}
+
+.m-bar span {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: var(--gold);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.m-stat {
+  display: grid;
+  justify-items: end;
+  gap: 0;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.m-stat b {
+  font: 500 19px/1.1 var(--mono);
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.m-stat small {
+  font: 10.5px var(--mono);
+}
+
+.m-stat.nutrients b {
+  color: var(--gold);
+}
+
+.m-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.m-actions .btn {
+  padding: 5px 10px;
+  font-size: 12.5px;
+}
+
+.toasts {
+  position: absolute;
+  left: 50%;
+  bottom: 56px;
+  transform: translateX(-50%);
+  display: grid;
+  gap: 8px;
+  justify-items: center;
+  width: min(420px, calc(100% - 24px));
+  pointer-events: none;
+}
+
+.toast {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  padding: 10px 16px 10px 10px;
+  border-radius: 14px;
+  background: var(--raised);
+  border: 1px solid var(--gold);
+  box-shadow: var(--shadow);
+  font-size: 13px;
+  color: var(--ink-soft);
+  animation: toast-in 0.35s ease-out;
+}
+
+.toast.plain {
+  grid-template-columns: minmax(0, 1fr);
+  border-color: var(--rule);
+  padding-left: 16px;
+}
+
+.toast.leaving {
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.4s, transform 0.4s;
+}
+
+.toast b {
+  display: block;
+  font: 400 17px/1.2 var(--display);
+  color: var(--ink);
+}
+
+.toast .eyebrow {
+  color: var(--gold);
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.97);
+  }
+}
+
+/* seals: achievement medallions */
+
+.seal {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font: 400 21px/1 var(--display);
+  color: var(--muted);
+  background: var(--rule-soft);
+  border: 2px dashed var(--rule);
+}
+
+.earned .seal,
+.toast .seal {
+  color: var(--raised);
+  background: var(--gold);
+  border: 2px solid var(--gold);
+  box-shadow: inset 0 0 0 2px var(--raised);
+}
+
+.medals {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 14px;
+}
+
+.medals li {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.medals b {
+  display: block;
+  font-size: 12.5px;
+  color: var(--ink-soft);
+}
+
+.medals li:not(.earned) b {
+  color: var(--muted);
+}
+
+/* campaign */
+
+.campaign {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.campaign li {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--rule);
+  background: var(--raised);
+}
+
+.campaign li.locked {
+  background: none;
+  border-style: dashed;
+  color: var(--muted);
+}
+
+.campaign li.current {
+  border-color: var(--gold);
+}
+
+.ch-num {
+  font: 400 24px/1 var(--display);
+  color: var(--gold);
+  text-align: center;
+}
+
+.locked .ch-num {
+  color: var(--muted);
+}
+
+.campaign h3 {
+  margin: 0;
+  font: 400 17px/1.2 var(--display);
+}
+
+.campaign p {
+  margin: 2px 0 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.stars {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.stars svg {
+  width: 14px;
+  height: 14px;
+  fill: var(--rule);
+}
+
+.stars svg.on {
+  fill: var(--gold);
+}
+
+/* dialogs */
+
+.game-dialog .objective {
+  display: grid;
+  gap: 2px;
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  box-shadow: inset 4px 0 0 var(--gold);
+}
+
+.objective b {
+  font: 400 19px/1.25 var(--display);
+}
+
+.objective small {
+  font: 11.5px var(--mono);
+  color: var(--muted);
+}
+
+.star-list {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+
+.star-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.star-list svg {
+  width: 15px;
+  height: 15px;
+  flex: none;
+  fill: var(--gold);
+}
+
+.star-list li.missed {
+  color: var(--muted);
+}
+
+.star-list li.missed svg {
+  fill: var(--rule);
+}
+
+.tips {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+
+.dialog-actions {
+  margin-top: 20px;
+}
+
+.result-stars {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.result-stars svg {
+  width: 46px;
+  height: 46px;
+  fill: var(--rule);
+}
+
+.result-stars svg.on {
+  fill: var(--gold);
+  animation: star-pop 0.5s cubic-bezier(0.3, 1.6, 0.5, 1) backwards;
+}
+
+.result-stars svg.on:nth-child(2) {
+  animation-delay: 0.25s;
+}
+
+.result-stars svg.on:nth-child(3) {
+  animation-delay: 0.5s;
+}
+
+@keyframes star-pop {
+  from {
+    transform: scale(0.2) rotate(-40deg);
+    opacity: 0;
+  }
+}
+
+#result h2 {
+  margin: 0;
+  text-align: center;
+  font: 400 30px/1.15 var(--display);
+}
+
+#result p {
+  text-align: center;
+  margin-inline: auto;
+}
+
+#result .dialog-actions {
+  justify-content: center;
+}
+
+@media (max-width: 1100px) {
+  .mission {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+  }
+
+  .m-goal {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .m-actions {
+    grid-column: 1 / -1;
+  }
+}
+
 /* ------------------------------------------------------------ small screens */
 
 @media (max-width: 900px) {
@@ -1167,7 +1586,7 @@ kbd {
 
   .app {
     height: auto;
-    grid-template-rows: auto auto;
+    grid-template-rows: auto auto auto;
   }
 
   .stage {
@@ -1210,5 +1629,7 @@ kbd {
 @media (prefers-reduced-motion: reduce) {
   * {
     scroll-behavior: auto !important;
+    animation: none !important;
+    transition: none !important;
   }
 }

@@ -1,6 +1,7 @@
 # Tidepool
 
-An artificial-life ecosystem that evolves while you watch. Open
+An artificial-life ecosystem that evolves while you watch, and a game about
+steering it. Open
 [`dist/index.html`](dist/index.html) in any modern browser. It's one
 self-contained file with no server and no install.
 
@@ -12,6 +13,47 @@ strategy, even its own mutation rate) and a **neural network** of 25 senses,
 12 hidden neurons, and 5 actions. None of their behaviour is scripted after
 the first generation. Creatures that find food breed, their offspring inherit
 slightly mutated genes and wiring, and the pool sorts out the rest.
+
+## Play it
+
+Tidepool has two modes.
+
+**Sandbox.** An endless pool that saves itself. Every power is free.
+
+**Challenges.** A campaign of seven scenarios. Each sets up a pool with a
+goal, a deadline and two bonus objectives, worth up to three stars. Winning
+one unlocks the next.
+
+| # | Challenge | Goal |
+| - | --- | --- |
+| 1 | First light | Have 6 established species (3+ members each) by day 14 |
+| 2 | The long winter | Keep 30+ creatures alive through harsh seasons until day 20 |
+| 3 | Intelligent design | Grow a lineage you designed in the Lab to 120 creatures |
+| 4 | Invasion | Drive a swarm of giant invasive hunters extinct while 2+ native species survive |
+| 5 | Adaptive radiation | Have 14 established species at once |
+| 6 | Gigantism | Push the pool's mean body size to 15 µm, against selection for small bodies |
+| 7 | Apex | Evolve a 70%+ carnivore with 8 members. It must evolve here; Lab designs don't count |
+
+In challenges, your powers cost **nutrients**. You earn nutrients over time,
+and you earn more when more species are alive, so a diverse pool pays for
+itself.
+
+| Power | Cost | Effect |
+| --- | --- | --- |
+| Feed (`F`) | 4 (1 per drag) | Scatter plankton |
+| Cull (`C`) | 12 | Remove every creature in a circle; their bodies sink as carrion |
+| Mutagen (`U`) | 18 | For 1.5 days, offspring of creatures in the circle mutate 3× as much |
+| Lab release | by size and number | Found a lineage of your own design |
+
+There are also **18 achievements** to earn in either mode, such as *Adaptive
+radiation*, *Leviathan*, *Methuselah*, *Mass extinction* and *Hand of god*.
+Stars and achievements are kept in your browser. Playing a challenge never
+touches your sandbox pool; the two save separately.
+
+`npm run balance` checks every challenge two ways across several seeds. It
+runs once with a player who does nothing, and once with a simple scripted
+player using the same nutrient budget. The goal is that doing nothing
+usually loses and playing well usually wins.
 
 ## What you'll see
 
@@ -59,6 +101,8 @@ slightly mutated genes and wiring, and the pool sorts out the rest.
 | What am I looking at? | **About** (includes a key to the pool) |
 | Pan / zoom | Drag / scroll wheel or pinch |
 | Pause, speed | `Space`, `1`–`4` |
+| Powers | Feed `F`, Cull `C`, Mutagen `U`, Inspect `I` |
+| Challenges and achievements | **Goals** tab |
 | Highlight a species | Click it in Census, Lineage or the log |
 | New random pool | **New pool** (a seed in the URL hash replays a pool, e.g. `#kelp-4821`) |
 
@@ -72,7 +116,8 @@ src/sim/      the simulation: pure JS, no DOM, deterministic per seed
   world.js    physics, senses, eating, biting, breeding, speciation, records
   names.js    trait-driven binomial names
   grid.js     spatial hash for neighbour queries
-src/ui/       canvas renderer, charts, panels, the Lab and the soundscape
+src/game/     the game layer: challenges, achievements, economy (no DOM)
+src/ui/       canvas renderer, charts, panels, the Lab, game UI and the soundscape
 scripts/      build (esbuild → one HTML file) and a headless runner
 test/         node:test suite
 ```
@@ -93,4 +138,5 @@ npm install
 npm test               # simulation tests
 npm run build          # writes dist/index.html
 npm run headless 60    # run 60 days without a browser and print a census
+npm run balance        # idle vs. scripted-player results for every challenge
 ```

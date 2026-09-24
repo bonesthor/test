@@ -8,15 +8,23 @@ import {
   esc, renderSpeciesList, renderSpecimenShell, updateSpecimen, renderLogEntry, renderTrends, renderSpeciesCard,
   renderDeaths,
 } from './panels.js';
+import { CHALLENGES, challengeById } from '../game/challenges.js';
+import { Game, Progress, POWERS, FEED_DRAG_COST, releaseCost, startChallenge } from '../game/game.js';
+import {
+  renderGoals, updateMission, showBriefing, setBriefingReady, closeBriefing, showResult, toast, achievementToast,
+} from './gameui.js';
 
 const $ = (id) => document.getElementById(id);
 const WARMUP_TICKS = TICKS_PER_DAY * 5;
 const SEED_WORDS = ['kelp', 'coral', 'brine', 'shoal', 'reef', 'lagoon', 'eddy', 'surf', 'tide', 'spray', 'drift', 'wrack'];
 const TICKS_PER_FRAME = { 1: 2, 4: 8, 16: 32, 64: Infinity };
-const TABS = ['census', 'lineage', 'specimen', 'log', 'lab'];
+const TABS = ['census', 'lineage', 'specimen', 'log', 'lab', 'goals'];
+const POWER_COLOR = { feed: 'plankton', cull: 'hunter', mutagen: 'mutagen' };
+const FEED_PREVIEW_RADIUS = 40;
 
 const state = {
   world: null,
+  game: new Game(),
   paused: false,
   speed: 1,
   tool: 'inspect',
@@ -25,19 +33,43 @@ const state = {
   focusSpecies: null,
   tab: 'census',
   warming: 0,
+  warmTotal: 1,
+  challengeWarm: null,
   dirtyPanels: true,
   lastPanel: 0,
+  lastMedals: 0,
+  medalsDue: false,
   lineage: null,
   notice: null,
   pending: null,
   lastFrame: null,
+  lastBroke: 0,
 };
 
 const canvas = $('pool');
 const ctx = canvas.getContext('2d');
 const cam = new Camera();
 const sound = new Soundscape();
-const view = { dpr: 1, get focusSpecies() { return state.focusSpecies; }, get selected() { return state.selected; } };
+const view = {
+  dpr: 1,
+  hover: null,
+  ripples: [],
+  get focusSpecies() {
+    return state.focusSpecies;
+  },
+  get selected() {
+    return state.selected;
+  },
+};
+
+function safeStorage() {
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+}
+const progress = new Progress(safeStorage());
 
 // ------------------------------------------------------------------ setup
 
@@ -46,21 +78,26 @@ function seedFromHash() {
   return /^[\w.~-]{1,40}$/.test(h) ? h : null;
 }
 
-function randomSeed() {
-  const w = SEED_WORDS[Math.floor(Math.random() * SEED_WORDS.length)];
+function randomSeed(prefix) {
+  const w = prefix ?? SEED_WORDS[Math.floor(Math.random() * SEED_WORDS.length)];
   return `${w}-${Math.floor(1000 + Math.random() * 9000)}`;
 }
 
-function newWorld(seed) {
-  // Shape the pool to the space it's shown in, so none of the view is wasted.
+// Shape the pool to the space it's shown in, so none of the view is wasted.
+function poolHeight() {
   const rect = canvas.getBoundingClientRect();
   const aspect = rect.width > 0 && rect.height > 0 ? rect.height / rect.width : 0.625;
-  const height = Math.round(Math.min(1400, Math.max(800, 1600 * aspect)) / 50) * 50;
-  adopt(new World({ seed, width: 1600, height }), WARMUP_TICKS);
+  return Math.round(Math.min(1400, Math.max(800, 1600 * aspect)) / 50) * 50;
 }
 
-function adopt(world, warmup) {
+function newWorld(seed) {
+  adopt(new World({ seed, width: 1600, height: poolHeight() }), WARMUP_TICKS, new Game());
+}
+
+function adopt(world, warmup, game) {
   state.world = world;
+  state.game = game;
+  state.challengeWarm = null;
   world.onEvent = onEvent;
   world.onBirth = (c) => state.warming <= 0 && sound.birth(world.species.get(c.speciesId).hue);
   world.onDeath = (c, cause) => state.warming <= 0 && cause === 'predation' && sound.kill();
@@ -68,31 +105,69 @@ function adopt(world, warmup) {
   state.following = false;
   state.focusSpecies = null;
   state.warming = warmup;
+  state.warmTotal = Math.max(1, warmup);
+  view.ripples.length = 0;
   $('clock-seed').textContent = world.seed;
   rebuildLog();
   resize();
   cam.fit(world);
   renderSpecimen();
+  setTool('inspect');
   state.dirtyPanels = true;
 }
 
 // ------------------------------------------------------------------ saving
+//
+// The sandbox pool and a challenge in progress live in separate slots, so
+// playing a challenge never costs you the pool you've been evolving.
 
-const SAVE_KEY = 'tidepool.save.v1';
+const SANDBOX_KEY = 'tidepool.save.v1';
+const CHALLENGE_KEY = 'tidepool.challenge.v1';
 
-function save() {
-  if (!state.world || state.warming > 0) return;
+function store(key, value) {
   try {
-    localStorage.setItem(SAVE_KEY, JSON.stringify(state.world.toJSON()));
+    if (value === null) localStorage.removeItem(key);
+    else localStorage.setItem(key, JSON.stringify(value));
   } catch {
     // Storage may be full or unavailable (private windows); the pool just won't resume.
   }
 }
 
-function loadSaved() {
+function load(key) {
   try {
-    const raw = localStorage.getItem(SAVE_KEY);
-    return raw ? World.fromJSON(JSON.parse(raw)) : null;
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function inChallenge() {
+  return state.game.mode === 'challenge';
+}
+
+function save() {
+  if (!state.world || state.warming > 0) return;
+  if (!inChallenge()) return store(SANDBOX_KEY, state.world.toJSON());
+  if (state.game.status === 'playing') store(CHALLENGE_KEY, { world: state.world.toJSON(), game: state.game.toJSON() });
+}
+
+function loadSandbox() {
+  const data = load(SANDBOX_KEY);
+  try {
+    return data ? World.fromJSON(data) : null;
+  } catch {
+    return null;
+  }
+}
+
+function loadChallenge() {
+  const data = load(CHALLENGE_KEY);
+  try {
+    if (!data) return null;
+    const game = Game.fromJSON(data.game);
+    if (!game.challenge || game.status !== 'playing') return null;
+    return { world: World.fromJSON(data.world), game };
   } catch {
     return null;
   }
@@ -119,6 +194,154 @@ function rebuildLog() {
   for (const ev of state.world.events.slice(-250)) onEvent(ev);
 }
 
+// ------------------------------------------------------------------ challenges
+
+function playChallenge(id) {
+  const ch = challengeById(id);
+  const index = CHALLENGES.indexOf(ch);
+  if (!ch || !progress.unlocked(index)) return;
+  store(CHALLENGE_KEY, null);
+  if (!inChallenge()) save();
+  const world = new World({ seed: randomSeed(ch.id), width: 1600, height: poolHeight(), ...ch.world });
+  const warmup = Math.round((ch.warmupDays ?? 0) * TICKS_PER_DAY);
+  // Until the pool has warmed up the challenge has no setup yet: hold a
+  // placeholder game in its briefing state.
+  adopt(world, warmup, new Game({ mode: 'challenge', challengeId: id, nutrients: ch.nutrients }));
+  if (warmup > 0) state.challengeWarm = ch;
+  else state.game = startChallenge(ch, world);
+  setPaused(false);
+  setTab(ch.tab ?? 'census');
+  showBriefing(ch, {
+    onBegin: () => {
+      state.game.begin();
+      closeBriefing();
+      setPaused(false);
+      notify(`Challenge on: ${ch.goal}.`, 6000);
+      save();
+    },
+    onCancel: () => {
+      closeBriefing();
+      backToSandbox();
+    },
+  });
+  setBriefingReady(warmup === 0, 0);
+}
+
+function backToSandbox() {
+  store(CHALLENGE_KEY, null);
+  const saved = loadSandbox();
+  if (saved) {
+    adopt(saved, 0, new Game());
+    notify(`Back in your sandbox pool, day ${saved.day.toFixed(1)}.`);
+  } else {
+    newWorld(randomSeed());
+  }
+  setPaused(false);
+}
+
+function handleOutcome(outcome) {
+  const game = state.game;
+  const ch = game.challenge;
+  const index = CHALLENGES.indexOf(ch);
+  store(CHALLENGE_KEY, null);
+  setPaused(true);
+  const improved = outcome === 'won' && progress.recordStars(ch.id, game.stars);
+  if (outcome === 'won') sound.fanfare();
+  else sound.extinction();
+  checkAchievements();
+  const next = CHALLENGES[index + 1];
+  const actions = [];
+  if (outcome === 'won' && next) actions.push({ label: `Next: ${next.title}`, run: () => playChallenge(next.id) });
+  actions.push({ label: outcome === 'won' ? 'Replay for more stars' : 'Try again', run: () => playChallenge(ch.id) });
+  actions.push({
+    label: 'Keep watching this pool',
+    run: () => {
+      setPaused(false);
+      notify('The challenge is over, so powers are free. Leave the challenge when you are done.');
+    },
+  });
+  actions.push({ label: 'Back to sandbox', run: backToSandbox });
+  showResult(game, state.world, { improved, actions });
+  if (state.tab === 'goals') renderGoalsTab();
+}
+
+function checkAchievements() {
+  if (state.warming > 0) return;
+  for (const a of progress.evaluate(state.world)) {
+    achievementToast(a);
+    sound.fanfare();
+    if (state.tab === 'goals') renderGoalsTab();
+  }
+}
+
+function renderGoalsTab() {
+  renderGoals(progress, inChallenge() && state.game.status === 'playing' ? state.game.challengeId : null, playChallenge);
+}
+
+// ------------------------------------------------------------------ powers
+
+function powerCost(tool, drag) {
+  return tool === 'feed' && drag ? FEED_DRAG_COST : POWERS[tool].cost;
+}
+
+function usePower(tool, at, drag = false) {
+  const world = state.world;
+  const cost = powerCost(tool, drag);
+  if (!state.game.spend(cost)) {
+    const now = performance.now();
+    if (now - state.lastBroke > 2500) {
+      state.lastBroke = now;
+      toast(
+        state.game.status === 'playing'
+          ? `Not enough nutrients: ${POWERS[tool].label} costs ${cost}, you have ${Math.floor(state.game.nutrients)}.`
+          : 'Begin the challenge first.',
+      );
+    }
+    return false;
+  }
+  const r = tool === 'feed' ? FEED_PREVIEW_RADIUS : POWERS[tool].radius;
+  if (tool === 'feed') progress.count('fed', world.sprinkle(at.x, at.y, drag ? 8 : 24));
+  if (tool === 'cull') {
+    const n = world.cull(at.x, at.y, r);
+    progress.count('culled', n);
+    if (n) sound.kill();
+  }
+  if (tool === 'mutagen') world.irradiate(at.x, at.y, r);
+  view.ripples.push({ x: at.x, y: at.y, r: drag ? r * 0.6 : r, color: POWER_COLOR[tool], t0: performance.now() });
+  if (view.ripples.length > 24) view.ripples.shift();
+  state.medalsDue = true;
+  state.dirtyPanels = true;
+  return true;
+}
+
+function release(design, at) {
+  const p = releasePrice(design);
+  if (p && !state.game.spend(p.cost)) {
+    toast(`Not enough nutrients: this release costs ${p.cost}.`);
+    return;
+  }
+  const sp = state.world.introduce(design.traits, {
+    count: design.count,
+    name: design.name,
+    weights: design.weights,
+    ...(at ?? {}),
+  });
+  progress.count('released');
+  if (design.weights) progress.count('transplants');
+  state.medalsDue = true;
+  setTool('inspect');
+  state.focusSpecies = sp.id;
+  state.dirtyPanels = true;
+  if (at) view.ripples.push({ x: at.x, y: at.y, r: 60, color: 'focus', t0: performance.now() });
+  notify(`Released ${design.count} ${sp.name}. Good luck to them.`);
+}
+
+function releasePrice(design) {
+  if (state.game.free) return null;
+  const cost = releaseCost(design);
+  return { cost, affordable: state.game.nutrients >= cost };
+}
+
 // ------------------------------------------------------------------ loop
 
 function resize() {
@@ -139,6 +362,7 @@ function resize() {
 
 function frame(now) {
   const world = state.world;
+  const game = state.game;
   const start = performance.now();
   if (state.warming > 0) {
     // Fast-forward the opening days so there's history to look at.
@@ -146,17 +370,24 @@ function frame(now) {
       world.step();
       state.warming--;
     }
+    if (state.challengeWarm) setBriefingReady(false, (1 - state.warming / state.warmTotal) * 100);
     if (state.warming <= 0) {
       state.dirtyPanels = true;
-      save();
+      if (state.challengeWarm) {
+        state.game = startChallenge(state.challengeWarm, world);
+        state.challengeWarm = null;
+        setBriefingReady(true);
+      } else save();
     }
-  } else if (!state.paused) {
+  } else if (!state.paused && game.status !== 'briefing') {
     const target = TICKS_PER_FRAME[state.speed];
     let n = 0;
     while (n < target && performance.now() - start < 14) {
       world.step();
       n++;
     }
+    const outcome = game.update(world);
+    if (outcome) handleOutcome(outcome);
   }
 
   if (state.selected && state.following) {
@@ -166,6 +397,7 @@ function frame(now) {
     cam.clamp(world);
   }
 
+  if (view.hover) view.hover.affordable = state.game.canAfford(powerCost(state.tool, false));
   drawPool(ctx, world, cam, view);
   updateHud();
 
@@ -177,16 +409,32 @@ function frame(now) {
     state.dirtyPanels = false;
     updatePanels();
   }
+  if (state.medalsDue || now - state.lastMedals > 1000) {
+    state.lastMedals = now;
+    state.medalsDue = false;
+    checkAchievements();
+  }
   requestAnimationFrame(frame);
 }
 
 function updateHud() {
   const world = state.world;
+  const game = state.game;
   $('clock-day').textContent = world.day.toFixed(1);
   const s = world.season;
   $('season-label').textContent = s > 0.5 ? 'Bloom' : 'Lean season';
   $('season-gauge').style.width = `${Math.round(s * 100)}%`;
   $('season-chip').title = `Plankton supply at ${Math.round(20 + 80 * s)}% of peak`;
+  $('new-pool').hidden = inChallenge();
+
+  // Power prices, shown only when they cost something.
+  for (const b of $('tool').querySelectorAll('[data-tool]')) {
+    const tool = b.dataset.tool;
+    const tag = b.querySelector('.cost');
+    if (!tag) continue;
+    tag.textContent = game.free ? '' : POWERS[tool].cost;
+    b.classList.toggle('poor', !game.canAfford(POWERS[tool].cost));
+  }
 
   // Scale bar: a round number of micrometres between 60 and 150 px.
   let um = 10;
@@ -196,8 +444,8 @@ function updateHud() {
 
   const chips = [];
   if (state.notice && performance.now() < state.notice.until) chips.push(`<span class="chip">${esc(state.notice.text)}</span>`);
-  if (state.warming > 0) {
-    chips.push(`<span class="chip">Fast-forwarding the first days… ${Math.round((1 - state.warming / WARMUP_TICKS) * 100)}%</span>`);
+  if (state.warming > 0 && !state.challengeWarm) {
+    chips.push(`<span class="chip">Fast-forwarding the first days… ${Math.round((1 - state.warming / state.warmTotal) * 100)}%</span>`);
   }
   if (state.focusSpecies) {
     const sp = world.species.get(state.focusSpecies);
@@ -210,7 +458,12 @@ function updateHud() {
   if (state.selected && state.following) {
     chips.push(`<span class="chip">Following no. ${state.selected.id}<button type="button" data-clear="follow" aria-label="Stop following">×</button></span>`);
   }
-  if (state.tool === 'feed') chips.push('<span class="chip">Click or drag in the pool to scatter plankton</span>');
+  const hint = {
+    feed: 'Click or drag to scatter plankton',
+    cull: 'Click to remove every creature inside the circle',
+    mutagen: 'Click to irradiate: their offspring will mutate faster',
+  }[state.tool];
+  if (hint) chips.push(`<span class="chip">${hint}<button type="button" data-clear="tool" aria-label="Put the tool down">×</button></span>`);
   if (state.tool === 'release' && state.pending) {
     const { name, count, traits } = state.pending;
     chips.push(
@@ -230,6 +483,7 @@ function updateHud() {
 function updatePanels() {
   const world = state.world;
   sound.season(world.season);
+  updateMission(state.game, world);
   if (state.tab === 'census') {
     $('st-pop').textContent = world.creatures.length;
     $('st-species').textContent = `${world.livingSpecies().length}/${world.speciesOrder.length}`;
@@ -257,6 +511,8 @@ function updatePanels() {
     state.lineage = drawLineage($('lineage-chart'), world, rows, state.focusSpecies);
   } else if (state.tab === 'specimen') {
     updateSpecimen($('specimen'), world, state.selected, state.following);
+  } else if (state.tab === 'lab') {
+    lab.updatePrice();
   }
 }
 
@@ -265,6 +521,10 @@ function updatePanels() {
 function select(c) {
   state.selected = c;
   if (!c) state.following = false;
+  else {
+    progress.examine(state.world, c);
+    state.medalsDue = true;
+  }
   renderSpecimen();
   state.dirtyPanels = true;
 }
@@ -307,6 +567,7 @@ function setTab(tab) {
     const prime = (c) => (c.age >= c.maturity ? 1 : 0.3) * (c.energy / c.maxEnergy) * (1 - c.age / c.lifespan);
     select(state.world.creatures.reduce((a, b) => (prime(b) > prime(a) ? b : a)));
   }
+  if (tab === 'goals') renderGoalsTab();
   state.dirtyPanels = true;
 }
 
@@ -315,23 +576,11 @@ function setSpeed(speed) {
   for (const b of $('speed').children) b.setAttribute('aria-pressed', String(Number(b.dataset.speed) === speed));
 }
 
-function release(design, at) {
-  const sp = state.world.introduce(design.traits, {
-    count: design.count,
-    name: design.name,
-    weights: design.weights,
-    ...(at ?? {}),
-  });
-  setTool('inspect');
-  state.focusSpecies = sp.id;
-  state.dirtyPanels = true;
-  notify(`Released ${design.count} ${sp.name}. Good luck to them.`);
-}
-
 function setTool(tool) {
   if (tool !== 'release') state.pending = null;
   state.tool = tool;
   canvas.dataset.tool = tool;
+  if (!POWERS[tool]) view.hover = null;
   for (const b of $('tool').children) b.setAttribute('aria-pressed', String(b.dataset.tool === tool));
 }
 
@@ -352,6 +601,16 @@ function localPoint(e) {
   return { x: e.clientX - r.left, y: e.clientY - r.top };
 }
 
+function updateHover(p) {
+  if (!POWERS[state.tool] || !p) {
+    view.hover = null;
+    return;
+  }
+  const w = cam.toWorld(p.x, p.y);
+  const r = state.tool === 'feed' ? FEED_PREVIEW_RADIUS : POWERS[state.tool].radius;
+  view.hover = { x: w.x, y: w.y, r, color: POWER_COLOR[state.tool], affordable: true };
+}
+
 canvas.addEventListener('pointerdown', (e) => {
   canvas.setPointerCapture(e.pointerId);
   const p = localPoint(e);
@@ -362,22 +621,23 @@ canvas.addEventListener('pointerdown', (e) => {
     return;
   }
   gesture = { kind: 'press', start: p, last: p, moved: false };
+  const w = cam.toWorld(p.x, p.y);
   if (state.tool === 'release' && state.pending) {
-    const w = cam.toWorld(p.x, p.y);
     release(state.pending, w);
     gesture.kind = 'done';
     return;
   }
-  if (state.tool === 'feed') {
-    const w = cam.toWorld(p.x, p.y);
-    state.world.sprinkle(w.x, w.y);
-    gesture.kind = 'feed';
+  if (POWERS[state.tool]) {
+    updateHover(p);
+    usePower(state.tool, w);
+    gesture.kind = state.tool === 'feed' ? 'feed' : 'done';
   }
 });
 
 canvas.addEventListener('pointermove', (e) => {
-  if (!pointers.has(e.pointerId) || !gesture) return;
   const p = localPoint(e);
+  if (e.pointerType === 'mouse') updateHover(p);
+  if (!pointers.has(e.pointerId) || !gesture) return;
   pointers.set(e.pointerId, p);
   if (gesture.kind === 'pinch' && pointers.size === 2) {
     const [a, b] = [...pointers.values()];
@@ -389,12 +649,12 @@ canvas.addEventListener('pointermove', (e) => {
   }
   if (gesture.kind === 'feed') {
     if (Math.hypot(p.x - gesture.last.x, p.y - gesture.last.y) > 14) {
-      const w = cam.toWorld(p.x, p.y);
-      state.world.sprinkle(w.x, w.y, 8);
+      usePower('feed', cam.toWorld(p.x, p.y), true);
       gesture.last = p;
     }
     return;
   }
+  if (gesture.kind !== 'press') return;
   if (!gesture.moved && Math.hypot(p.x - gesture.start.x, p.y - gesture.start.y) > 5) {
     gesture.moved = true;
     state.following = false;
@@ -408,10 +668,13 @@ canvas.addEventListener('pointermove', (e) => {
   gesture.last = p;
 });
 
+canvas.addEventListener('pointerleave', () => (view.hover = null));
+
 function endPointer(e) {
   if (!pointers.has(e.pointerId)) return;
   pointers.delete(e.pointerId);
   canvas.classList.remove('dragging');
+  if (e.pointerType !== 'mouse') view.hover = null;
   if (gesture?.kind === 'press' && !gesture.moved && e.type === 'pointerup') {
     const p = localPoint(e);
     const w = cam.toWorld(p.x, p.y);
@@ -436,6 +699,7 @@ canvas.addEventListener(
     const p = localPoint(e);
     cam.zoomAt(p.x, p.y, Math.exp(-e.deltaY * 0.0015));
     cam.clamp(state.world);
+    updateHover(p);
   },
   { passive: false },
 );
@@ -465,6 +729,42 @@ $('about').addEventListener('click', (e) => {
   if (e.target === e.currentTarget) e.currentTarget.close();
 });
 
+$('m-brief').addEventListener('click', () => {
+  const ch = state.game.challenge;
+  if (!ch) return;
+  const wasPaused = state.paused;
+  setPaused(true);
+  showBriefing(ch, {
+    onBegin: () => {
+      closeBriefing();
+      setPaused(wasPaused);
+    },
+    onCancel: () => {
+      closeBriefing();
+      backToSandbox();
+    },
+  });
+  setBriefingReady(true);
+  $('briefing-begin').textContent = 'Resume';
+});
+
+// Leaving asks once, in the mission bar itself: the viewer can't show confirm().
+$('m-abandon').addEventListener('click', (e) => {
+  const b = e.currentTarget;
+  if (state.game.status !== 'playing' || b.dataset.confirm) {
+    delete b.dataset.confirm;
+    b.textContent = 'Leave challenge';
+    backToSandbox();
+    return;
+  }
+  b.dataset.confirm = '1';
+  b.textContent = 'Leave? Progress is lost';
+  setTimeout(() => {
+    delete b.dataset.confirm;
+    b.textContent = 'Leave challenge';
+  }, 4000);
+});
+
 async function toggleSound() {
   const on = !sound.enabled;
   try {
@@ -484,7 +784,7 @@ $('speed').addEventListener('click', (e) => {
 });
 $('tool').addEventListener('click', (e) => {
   const b = e.target.closest('button[data-tool]');
-  if (b) setTool(b.dataset.tool);
+  if (b) setTool(state.tool === b.dataset.tool && b.dataset.tool !== 'inspect' ? 'inspect' : b.dataset.tool);
 });
 $('new-pool').addEventListener('click', () => {
   const seed = randomSeed();
@@ -494,11 +794,7 @@ $('new-pool').addEventListener('click', () => {
     // Some frames refuse history changes; the pool still resets.
   }
   newWorld(seed);
-  try {
-    localStorage.removeItem(SAVE_KEY);
-  } catch {
-    // Nothing saved, or storage unavailable.
-  }
+  store(SANDBOX_KEY, null);
 });
 
 for (const name of TABS) $(`tab-${name}`).addEventListener('click', () => setTab(name));
@@ -508,7 +804,7 @@ $('pool-chips').addEventListener('click', (e) => {
   if (!b) return;
   if (b.dataset.clear === 'focus') state.focusSpecies = null;
   if (b.dataset.clear === 'follow') state.following = false;
-  if (b.dataset.clear === 'release') setTool('inspect');
+  if (b.dataset.clear === 'release' || b.dataset.clear === 'tool') setTool('inspect');
   state.dirtyPanels = true;
 });
 
@@ -542,16 +838,19 @@ lineageCanvas.addEventListener('click', (e) => {
 
 window.addEventListener('keydown', (e) => {
   if (e.target.closest('input, textarea, dialog') || e.metaKey || e.ctrlKey || e.altKey) return;
+  const key = e.key.toLowerCase();
   if (e.key === ' ') {
     if (e.target.closest('button')) return;
     e.preventDefault();
     setPaused(!state.paused);
   } else if (['1', '2', '3', '4'].includes(e.key)) setSpeed([1, 4, 16, 64][Number(e.key) - 1]);
-  else if (e.key === 'f' || e.key === 'F') setTool('feed');
-  else if (e.key === 'm' || e.key === 'M') toggleSound();
-  else if (e.key === 'i' || e.key === 'I') setTool('inspect');
+  else if (key === 'f') setTool('feed');
+  else if (key === 'c') setTool('cull');
+  else if (key === 'u') setTool('mutagen');
+  else if (key === 'm') toggleSound();
+  else if (key === 'i') setTool('inspect');
   else if (e.key === 'Escape') {
-    if (state.tool === 'release') return setTool('inspect');
+    if (state.tool !== 'inspect') return setTool('inspect');
     select(null);
     state.focusSpecies = null;
   }
@@ -574,13 +873,20 @@ const lab = new Lab($('panel-lab'), {
     setTool('release');
     if (window.matchMedia('(max-width: 900px)').matches) canvas.scrollIntoView({ behavior: 'smooth', block: 'center' });
   },
+  price: (design) => (state.game ? releasePrice(design) : null),
 });
 
-// Resume the saved pool unless the link names a different one.
+// Resume a challenge in progress, else the saved sandbox pool (unless the
+// link names a different one), else start fresh.
 const hashSeed = seedFromHash();
-const saved = loadSaved();
-if (saved && (!hashSeed || hashSeed === saved.seed)) {
-  adopt(saved, 0);
+const challenge = loadChallenge();
+const saved = challenge ? null : loadSandbox();
+if (challenge) {
+  adopt(challenge.world, 0, challenge.game);
+  setPaused(true);
+  notify(`Challenge resumed: ${challenge.game.challenge.title}. Press Play when ready.`, 9000);
+} else if (saved && (!hashSeed || hashSeed === saved.seed)) {
+  adopt(saved, 0, new Game());
   notify(`Welcome back. Your pool resumes on day ${saved.day.toFixed(1)}.`);
 } else {
   newWorld(hashSeed ?? 'tidepool');

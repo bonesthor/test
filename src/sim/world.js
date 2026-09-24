@@ -25,12 +25,16 @@ export const DEFAULTS = {
   speciesThreshold: 0.25,
   seasonDays: 12,
   upwellings: 3,
+  foodScale: 1, // multiplies plankton supply, for harsher or kinder pools
+  hunterFounder: true, // one founding lineage arrives pre-wired to hunt
+  immigration: true, // hunters wash in if predators vanish for a while
 };
 
 export const CAUSES = {
   starvation: 'starved',
   predation: 'was eaten',
   age: 'died of old age',
+  culled: 'was culled',
 };
 
 function wrapAngle(a) {
@@ -48,6 +52,8 @@ export class World {
       if (options[key] === undefined) this.opts[key] = DEFAULTS[key] * area;
     }
     this.opts.startPopulation = Math.round(this.opts.startPopulation);
+    this.opts.foodRate *= this.opts.foodScale;
+    this.opts.maxPlankton *= this.opts.foodScale;
     this.seed = options.seed ?? 'tidepool';
     this.rng = new Rng(this.seed);
     this.width = this.opts.width;
@@ -67,7 +73,7 @@ export class World {
     this.totalKills = 0;
     this.firstKill = false;
     this.firstCarnivore = false;
-    this.deaths = { starvation: 0, predation: 0, age: 0 };
+    this.deaths = { starvation: 0, predation: 0, age: 0, culled: 0 };
     this.foodDebt = 0;
     this.sampleEvery = 60;
     this.samples = [];
@@ -115,7 +121,7 @@ export class World {
     const ids = [];
     for (let f = 0; f < founders; f++) {
       // The last of several founders is a hunter, so predators have a foothold.
-      const hunter = hunters || (founders > 1 && f === founders - 1);
+      const hunter = hunters || (this.opts.hunterFounder && founders > 1 && f === founders - 1);
       const genome = primordialGenome(this.rng, hunter);
       const sp = this.createSpecies(genome, null);
       ids.push(sp.id);
@@ -211,6 +217,7 @@ export class World {
       killerId: null,
       diedTick: null,
       wiggle: this.rng.range(0, TAU),
+      mutagenUntil: 0,
     };
     this.creatures.push(c);
     this.byId.set(c.id, c);
@@ -261,6 +268,8 @@ export class World {
       designed: false,
       ...extra,
     };
+    // Every species remembers the founding lineage it ultimately descends from.
+    sp.rootId = extra.rootId ?? (parent ? parent.rootId : sp.id);
     this.species.set(sp.id, sp);
     this.speciesOrder.push(sp);
     return sp;
@@ -347,13 +356,18 @@ export class World {
 
   // Scatter plankton by hand (the "feed" tool).
   sprinkle(x, y, amount = 24) {
+    let n = 0;
     for (let i = 0; i < amount; i++) {
       const a = this.rng.range(0, TAU);
       const r = Math.abs(this.rng.gauss()) * 26;
       const fx = x + Math.cos(a) * r;
       const fy = y + Math.sin(a) * r;
-      if (fx > 2 && fy > 2 && fx < this.width - 2 && fy < this.height - 2) this.spawnPlankton(fx, fy);
+      if (fx > 2 && fy > 2 && fx < this.width - 2 && fy < this.height - 2) {
+        this.spawnPlankton(fx, fy);
+        n++;
+      }
     }
+    return n;
   }
 
   // ---------------------------------------------------------------- step
@@ -409,7 +423,7 @@ export class World {
     }
 
     // If predators have been gone a while, the tide eventually brings more.
-    if (this.tick % (TICKS_PER_DAY * 2) === 0) {
+    if (this.opts.immigration && this.tick % (TICKS_PER_DAY * 2) === 0) {
       const hunting = this.creatures.some((c) => c.genome.traits.diet > 0.4);
       if (hunting) this.lastHunterTick = this.tick;
       else if (this.tick - this.lastHunterTick > TICKS_PER_DAY * 14 && this.creatures.length > 60) {
@@ -678,7 +692,9 @@ export class World {
   }
 
   reproduce(parent, newborn) {
-    const genome = mutate(parent.genome, this.rng);
+    // Offspring of irradiated parents mutate far more than usual.
+    const boost = parent.mutagenUntil > this.tick ? 3 : 1;
+    const genome = mutate(parent.genome, this.rng, boost);
     const speciesId = this.classify(genome, parent.speciesId);
     const back = parent.radius + 4;
     const child = this.spawnCreature(genome, speciesId, {
@@ -699,6 +715,43 @@ export class World {
   carcassEnergy(c) {
     const body = 26 * c.genome.traits.size ** 2 * (0.55 + 0.45 * Math.min(1, c.age / c.maturity));
     return body + Math.max(0, c.energy) * 0.5;
+  }
+
+  // Player powers ---------------------------------------------------------
+
+  // Remove every creature within `r` of (x, y). Their bodies sink as carrion.
+  cull(x, y, r) {
+    let n = 0;
+    for (const c of this.creatures) {
+      if (c.alive && Math.hypot(c.x - x, c.y - y) <= r + c.radius) {
+        this.kill(c, 'culled');
+        n++;
+      }
+    }
+    return n;
+  }
+
+  // Irradiate creatures within `r`: for `days`, their offspring mutate faster.
+  irradiate(x, y, r, days = 1.5) {
+    let n = 0;
+    const until = this.tick + Math.round(days * TICKS_PER_DAY);
+    for (const c of this.creatures) {
+      if (c.alive && Math.hypot(c.x - x, c.y - y) <= r + c.radius) {
+        c.mutagenUntil = until;
+        n++;
+      }
+    }
+    return n;
+  }
+
+  // How many living creatures descend from each founding lineage.
+  lineageCounts() {
+    const counts = new Map();
+    for (const c of this.creatures) {
+      const root = this.species.get(c.speciesId).rootId;
+      counts.set(root, (counts.get(root) ?? 0) + 1);
+    }
+    return counts;
   }
 
   kill(c, cause, killer = null, eaten = 0) {
@@ -833,11 +886,14 @@ World.fromJSON = function fromJSON(data) {
     const [x, y, energy, kind, age] = data.food.slice(i, i + 5);
     w.food.push({ x, y, energy, kind, age, alive: true });
   }
-  w.deaths = { starvation: 0, predation: 0, age: 0, ...data.deaths };
+  w.deaths = { starvation: 0, predation: 0, age: 0, culled: 0, ...data.deaths };
   w.samples = data.samples;
   w.events = data.events;
   w.speciesOrder = data.species.map((o) => ({ ...o, founder: unpackGenome(o.founder) }));
   w.species = new Map(w.speciesOrder.map((sp) => [sp.id, sp]));
+  // Saves from before lineage roots were tracked: derive them (parents come first).
+  for (const sp of w.speciesOrder) sp.rootId ??= sp.parentId ? w.species.get(sp.parentId).rootId : sp.id;
+  w.opts = { ...DEFAULTS, ...w.opts };
   w.creatures = data.creatures.map((o) => {
     const c = { ...o, genome: unpackGenome(o.genome), brain: createBrainState(), prey: null };
     delete c.memory;

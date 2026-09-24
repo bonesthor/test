@@ -161,7 +161,7 @@ export function updateSpecimen(el, world, c, following) {
   const status = f('status');
   if (c.alive) {
     status.className = 'status';
-    status.textContent = c.age < c.maturity ? 'Alive · juvenile' : 'Alive';
+    status.textContent = (c.age < c.maturity ? 'Alive · juvenile' : 'Alive') + (c.mutagenUntil > world.tick ? ' · irradiated' : '');
   } else {
     status.className = 'status dead';
     let text = `Dead · ${CAUSES[c.cause]} on day ${days(c.diedTick)}`;
